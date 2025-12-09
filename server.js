@@ -4,8 +4,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path'); // <-- [बदलाव 1: 'path' मॉड्यूल जोड़ा गया]
-const User = require('./models/User'); // <-- [बदलाव 2: 'User' मॉडल जोड़ा गया]
+const path = require('path');
+const User = require('./models/User');
 
 // --- Import Routes ---
 const walletRoutes = require('./routes/wallet');
@@ -27,7 +27,9 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 // --- Database Connection ---
-const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/coupl>
+// ********** MONGODB_URI यहाँ ठीक कर दिया गया है **********
+const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app';
+// ********************************************************
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Atlas Connected'))
@@ -39,7 +41,7 @@ mongoose.connect(MONGODB_URI)
 // --- API Routes ---
 app.use('/api/wallet', walletRoutes);
 
-// ********** [बदलाव 3: LOGIN API ROUTE जोड़ा गया] **********
+// ********** LOGIN API ROUTE **********
 app.post('/api/login', async (req, res) => {
     const { username } = req.body;
 
@@ -60,10 +62,10 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during authentication.' });
     }
 });
-// ********************************************************
+// *************************************
 
 
-// --- [बदलाव 4: HOMEPAGE ROUTE जोड़ा गया] ---
+// --- HOMEPAGE ROUTE (index.html) ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -97,4 +99,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
-                              
+  
