@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couple Voice Chat Room</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <div class="app-container">
+        
+        <header class="room-header">
+            <h3>❤️ Love Café (Room #101)</h3>
+            <span class="live-badge">LIVE 🔴</span>
+        </header>
+
+        <div class="host-area">
+            <div class="seat host-seat" id="host-seat">
+                <img src="https://i.pravatar.cc/150?img=1" alt="Host" class="avatar">
+                <div class="mic-icon active">🎤</div>
+                <span class="username">Host Annie 👑</span>
+            </div>
+        </div>
+
+        <div class="seats-grid" id="seats-grid">
+            <div class="seat empty-seat"><span>+</span></div> 
+        </div>
+
+        <div class="footer-controls">
+            <button class="btn" onclick="simulateGift(100)">💬 Chat</button>
+            <button class="btn gift-btn" onclick="simulateGift(500)">🎁 Gift (500)</button>
+            <button class="btn">🚪 Leave</button>
+        </div>
+
+        <div id="notification-area"></div>
+        
+        <div id="gift-animation-container"></div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script> 
+    <script src="scripts/socketClient.js"></script>
+    <script src="scripts/ui.js"></script> 
+</body>
+              </html>
+              
