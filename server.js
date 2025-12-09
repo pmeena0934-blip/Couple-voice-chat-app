@@ -1,4 +1,4 @@
-// server.js
+// server.js (Updated with MongoDB Atlas)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -25,9 +25,14 @@ const io = new Server(server, {
 app.set('socketio', io); 
 
 // --- Database Connection ---
-mongoose.connect('mongodb://localhost:27017/couple-voice-chat')
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log(err));
+const MONGODB_URI = 'mongodb+srv://Meena7800:<db_password>@cluster0.c2utkn0.mongodb.net/couple-voice-chat?appName=Cluster0';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('MongoDB Atlas Connected'))
+  .catch(err => {
+    console.error('MongoDB Atlas Connection Error:');
+    console.error(err);
+  });
 
 // --- API Routes ---
 app.use('/api/wallet', walletRoutes);
@@ -59,4 +64,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available on http://localhost:${PORT}`));
-                      
+                                       
