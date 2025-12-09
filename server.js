@@ -25,7 +25,7 @@ const io = new Server(server, {
 app.set('socketio', io); 
 
 // --- Database Connection ---
-const MONGODB_URI = 'mongodb+srv://Meena7800:meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat?appName=Cluster0';
+const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat?appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Atlas Connected'))
