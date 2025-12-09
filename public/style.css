@@ -1,0 +1,64 @@
+/* Phase 3: General Styling */
+body { background-color: #121212; color: white; font-family: Arial, sans-serif; margin: 0; display: flex; justify-content: center; }
+.app-container { width: 100%; max-width: 400px; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+/* Header and Footer styles */
+.room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.live-badge { background: red; padding: 5px 10px; border-radius: 12px; font-size: 12px; }
+.footer-controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 360px; display: flex; justify-content: space-around; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 20px; }
+/* Seat Styles */
+.host-area { display: flex; justify-content: center; margin-bottom: 40px; }
+.seats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 80px; }
+.seat { display: flex; flex-direction: column; align-items: center; position: relative; }
+.avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+.host-seat .avatar { width: 100px; height: 100px; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
+.username { font-size: 10px; margin-top: 5px; opacity: 0.8; }
+
+/* Phase 3: VIP Entry Animation */
+.vip-entry-card {
+    position: absolute;
+    top: 100px;
+    left: -100%; 
+    background: linear-gradient(90deg, #ff9966, #ff5e62);
+    padding: 10px 20px;
+    border-radius: 0 50px 50px 0;
+    color: white;
+    font-weight: bold;
+    z-index: 1000;
+    animation: slideInAndGlow 5s ease-in-out forwards;
+}
+@keyframes slideInAndGlow {
+    0% { left: -100%; opacity: 0; }
+    10% { left: 0; opacity: 1; }  
+    80% { left: 0; opacity: 1; filter: drop-shadow(0 0 10px gold); } 
+    100% { left: -100%; opacity: 0; }
+}
+
+/* Phase 4: Flying Gift Animation */
+#gift-animation-container {
+    position: fixed;
+    bottom: 80px; 
+    left: 0;
+    width: 100%;
+    pointer-events: none; 
+    z-index: 500;
+}
+.flying-gift {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background-size: cover;
+    opacity: 0;
+    animation: flyUpAndFade 3s ease-out forwards; 
+}
+
+/* Gift Icons */
+/* NOTE: आपको 'assets/rose_icon.png' जैसी फाइलें अपने प्रोजेक्ट में जोड़नी होंगी */
+.gift-rose { background-color: pink; border-radius: 50%; left: 10%; } 
+.gift-rocket { background-color: orange; border-radius: 50%; left: 70%; }
+
+@keyframes flyUpAndFade {
+    0% { transform: translateY(0) scale(1); opacity: 0.5; }
+    50% { transform: translateY(-400px) scale(1.2); opacity: 1; }
+    100% { transform: translateY(-700px) scale(0.5); opacity: 0; }
+         }
+  
