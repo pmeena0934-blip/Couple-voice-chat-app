@@ -1,0 +1,15 @@
+{
+  "name": "couple-voice-chat-app",
+  "version": "1.0.0",
+  "description": "Group Voice Chat Platform Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "mongoose": "^8.0.3",
+    "cors": "^2.8.5"
+  }
+}
