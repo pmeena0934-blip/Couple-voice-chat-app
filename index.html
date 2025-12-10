@@ -6,7 +6,6 @@
     <title>Couple Voice Chat App</title>
     
     <link rel="stylesheet" href="style.css"> 
-    
     <link rel="stylesheet" href="login-modal.css"> 
     
     <style>
@@ -40,7 +39,7 @@
             justify-content: center; 
             align-items: center;
         }
-        /* Style for the Profile Edit Modal (Basic) */
+        /* Style for the Modals (Profile Edit & Buy Diamonds) */
         .edit-modal {
             position: fixed;
             top: 50%;
@@ -52,12 +51,40 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             z-index: 1000;
             display: none;
+            color: #333;
+            width: 90%;
+            max-width: 350px;
         }
         .edit-modal input, .edit-modal button {
             display: block;
             margin: 10px 0;
-            padding: 8px;
+            padding: 10px;
             width: 100%;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .edit-modal button {
+            cursor: pointer;
+            background-color: #ff69b4;
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+        .edit-modal h3 {
+            color: #1a1a2e;
+        }
+        .edit-modal .upi-info {
+             border: 2px solid #2ecc71; 
+             background: #eafaf1;
+             padding: 15px;
+             margin-bottom: 15px;
+             border-radius: 8px;
+        }
+        .edit-modal .upi-info p {
+            margin: 5px 0;
+            color: #27ae60;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -79,6 +106,24 @@
         <button onclick="handleProfileEdit()">Save Changes</button>
         <button onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
     </div>
+
+    <div class="edit-modal" id="buy-modal">
+        <h3>Buy Diamonds (UPI)</h3>
+        
+        <div class="upi-info">
+            <p>💰 **Package:** 500 Diamonds for ₹200</p>
+            <p>1. Scan the QR Code (Placeholder Image/Link):</p>
+            <p style="font-size: 12px; color: #34495e;"></p>
+            <p>2. Pay to UPI ID: **couplechatowner@upi**</p>
+        </div>
+
+        <input type="text" id="buy-utr" placeholder="Enter UTR/Transaction ID (Compulsory)">
+        <input type="text" id="buy-screenshot-url" placeholder="Screenshot URL (e.g., Imgur/Cloudinary link)">
+        
+        <button onclick="handleDiamondPurchase()">Submit Payment Request (₹200)</button>
+        <button onclick="document.getElementById('buy-modal').style.display='none'">Cancel</button>
+    </div>
+
 
     <div id="app-ui">
         <div class="app-container">
@@ -136,6 +181,7 @@
             <div class="footer-controls">
                 <button class="btn" onclick="sendChatMessage()">💬 Chat</button>
                 <button class="btn gift-btn" onclick="simulateGift(500)">🎁 Gift (500)</button>
+                <button class="btn" onclick="showBuyModal()">💰 Buy Diamonds</button>
                 <button class="btn" onclick="showEditModal()">⚙️ Edit Profile</button>
                 <button class="btn">🚪 Leave</button>
             </div>
@@ -156,7 +202,8 @@
         const userInfoDisplay = document.getElementById('user-info');
         const appUi = document.getElementById('app-ui');
         const editModal = document.getElementById('edit-modal');
-        
+        const buyModal = document.getElementById('buy-modal'); // New
+
         // --- Utility Functions ---
         function getStoredUser() {
             const username = localStorage.getItem('username');
@@ -180,9 +227,8 @@
             
             updateHostUI(user);
             
-            // Socket.io कनेक्शन लॉजिक
             const socket = io(); 
-            window.socket = socket; // Global access for socketClient.js & ui.js
+            window.socket = socket; 
             
             socket.on('connect', () => {
                 const roomId = '101'; 
@@ -190,18 +236,15 @@
                 socket.emit('join_room', { roomId, userId: user.username }); 
             });
             
-            // Set up UI listeners
             if (typeof window.setupSocketListeners === 'function') {
                 window.setupSocketListeners(socket); 
             }
             
-            // Start Voice Chat
             if (typeof window.initVoiceChat === 'function') {
                 window.initVoiceChat(); 
             }
         }
 
-        // Check for stored user on load
         const storedUser = getStoredUser();
         if (storedUser.username) {
             showAppUI(storedUser);
@@ -226,7 +269,6 @@
                 if (data.success) {
                     alert(data.message);
                     
-                    // Save user data (including new fields)
                     localStorage.setItem('username', data.user.username);
                     localStorage.setItem('diamonds', data.user.diamonds);
                     localStorage.setItem('profilePic', data.user.profilePic);
@@ -275,13 +317,11 @@
                     alert(data.message);
                     editModal.style.display = 'none';
 
-                    // Update localStorage with new data
                     localStorage.setItem('username', data.user.username);
                     localStorage.setItem('diamonds', data.user.diamonds);
                     localStorage.setItem('profilePic', data.user.profilePic);
                     localStorage.setItem('roomName', data.user.roomName);
                     
-                    // Refresh UI
                     updateHostUI(data.user);
                 } else {
                     alert('Profile Update Failed: ' + data.message);
@@ -292,6 +332,46 @@
             }
         }
         
+        // --- Buy Diamonds Logic (NEW) ---
+        window.showBuyModal = function() {
+            buyModal.style.display = 'block';
+        }
+
+        window.handleDiamondPurchase = async function() {
+            const username = localStorage.getItem('username');
+            const utrNumber = document.getElementById('buy-utr').value.trim();
+            const screenshotUrl = document.getElementById('buy-screenshot-url').value.trim();
+
+            if (!utrNumber || !screenshotUrl) {
+                alert('Please enter UTR and Screenshot URL.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/buy-diamonds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, utrNumber, screenshotUrl })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    buyModal.style.display = 'none';
+                    document.getElementById('buy-utr').value = ''; // Clear fields
+                    document.getElementById('buy-screenshot-url').value = '';
+                } else {
+                    alert('Purchase Failed: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Network Error:', error);
+                alert('An error occurred during purchase submission.');
+            }
+        }
+        // --- End Buy Diamonds Logic ---
+
+
         // --- Gift/Chat Logic ---
         window.simulateGift = function(amount) {
             const currentUsername = localStorage.getItem('username');
@@ -299,6 +379,9 @@
                  alert('Please login first.');
                  return;
             }
+            
+            // ToDo: Receiver should be dynamically selected, for now HostAnnie is fixed
+            const receiverId = 'HostAnnie'; 
 
             fetch('/api/wallet/gift', {
                 method: 'POST',
@@ -308,7 +391,7 @@
                 },
                 body: JSON.stringify({
                     senderId: currentUsername,
-                    receiverId: 'HostAnnie', // For demo, HostAnnie is the fixed receiver
+                    receiverId: receiverId, 
                     amount: amount
                 })
             })
@@ -319,11 +402,10 @@
                     localStorage.setItem('diamonds', data.newBalance);
                     updateHostUI(getStoredUser()); 
                     
-                    // Emit real-time gift signal
                     if (window.socket) {
                          window.socket.emit('send_gift_realtime', {
                             sender: currentUsername,
-                            receiver: 'HostAnnie',
+                            receiver: receiverId,
                             amount: amount,
                             roomId: '101',
                             leveledUp: data.leveledUp || false
@@ -342,5 +424,5 @@
 
     </script>
 </body>
-                </html>
-                    
+        </html>
+            
