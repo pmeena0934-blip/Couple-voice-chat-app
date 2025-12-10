@@ -19,15 +19,13 @@
 <body>
 
 <div class="login-container">
-    <h2>Couple Voice Chat Login</h2>
+    <h2>Couple Voice Chat Login</h2> 
     <input type="text" id="usernameInput" placeholder="Enter Username">
     <button onclick="handleLogin()">Login / Register</button>
     <div id="message"></div>
 </div>
 
 <script>
-    // **CRITICAL: Render URL की जगह, आप अपनी Render Service URL या लोकलहोस्ट का उपयोग करें**
-    // यदि आप Render पर डिप्लॉय कर रहे हैं, तो URL को '/' रखें ताकि यह उसी सर्वर पर कॉल करे
     const API_URL = '/api/login'; 
     const messageDiv = document.getElementById('message');
 
@@ -57,13 +55,21 @@
             if (response.ok) {
                 // Success: Login or Registration was successful
                 messageDiv.className = 'success';
-                messageDiv.innerHTML = `${data.message} User: <strong>${data.user.username}</strong> | Diamonds: ${data.user.diamonds}`;
+                messageDiv.innerHTML = `${data.message} User: <strong>${data.user.username}</strong> | Diamonds: ${data.user.diamonds}<br>Redirecting...`;
 
-                // यहाँ से आप यूजर को अगले पेज पर भेज सकते हैं
-                console.log('Login successful. User data:', data.user);
-                // setTimeout(() => {
-                //     window.location.href = '/chat-room.html'; // यदि आपके पास अगला पेज है
-                // }, 2000);
+                // **********************************************
+                // *** नया लॉजिक: लोकल स्टोरेज में डेटा सेव करना और रीडायरेक्ट करना ***
+                // **********************************************
+                
+                // 1. यूजर डेटा को लोकल स्टोरेज में सेव करें
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                
+                // 2. 2 सेकंड बाद Rooms List पेज पर रीडायरेक्ट करें
+                setTimeout(() => {
+                    // अब हम rooms.html पर रीडायरेक्ट करेंगे
+                    window.location.href = '/rooms.html'; 
+                }, 2000);
+                // **********************************************
 
             } else {
                 // Server returned an error (e.g., 500, 400, 503)
