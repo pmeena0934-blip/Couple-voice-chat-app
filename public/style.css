@@ -1,64 +1,111 @@
-/* Phase 3: General Styling */
-body { background-color: #121212; color: white; font-family: Arial, sans-serif; margin: 0; display: flex; justify-content: center; }
-.app-container { width: 100%; max-width: 400px; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-/* Header and Footer styles */
-.room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-.live-badge { background: red; padding: 5px 10px; border-radius: 12px; font-size: 12px; }
-.footer-controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 360px; display: flex; justify-content: space-around; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 20px; }
-/* Seat Styles */
-.host-area { display: flex; justify-content: center; margin-bottom: 40px; }
-.seats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 80px; }
-.seat { display: flex; flex-direction: column; align-items: center; position: relative; }
-.avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
-.host-seat .avatar { width: 100px; height: 100px; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
-.username { font-size: 10px; margin-top: 5px; opacity: 0.8; }
+/* public/style.css */
 
-/* Phase 3: VIP Entry Animation */
-.vip-entry-card {
-    position: absolute;
-    top: 100px;
-    left: -100%; 
-    background: linear-gradient(90deg, #ff9966, #ff5e62);
-    padding: 10px 20px;
-    border-radius: 0 50px 50px 0;
+/* --- Global Styles --- */
+body {
+    background-color: #1a1a2e; /* Dark background */
+    color: #f4f4f9;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- App Container --- */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 450px; /* Mobile View */
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.room-header h3 {
+    margin: 0;
+    color: #ff69b4; /* Pink Heart */
+}
+.live-badge {
+    background-color: red;
     color: white;
-    font-weight: bold;
-    z-index: 1000;
-    animation: slideInAndGlow 5s ease-in-out forwards;
-}
-@keyframes slideInAndGlow {
-    0% { left: -100%; opacity: 0; }
-    10% { left: 0; opacity: 1; }  
-    80% { left: 0; opacity: 1; filter: drop-shadow(0 0 10px gold); } 
-    100% { left: -100%; opacity: 0; }
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
 }
 
-/* Phase 4: Flying Gift Animation */
-#gift-animation-container {
-    position: fixed;
-    bottom: 80px; 
-    left: 0;
-    width: 100%;
-    pointer-events: none; 
-    z-index: 500;
+/* --- Host Area --- */
+.host-area {
+    display: flex;
+    justify-content: center;
+    padding: 30px 0;
 }
-.flying-gift {
-    position: absolute;
+
+/* --- Seats Grid (Users) --- */
+.seats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 seats per row */
+    gap: 15px;
+    padding: 20px;
+    flex-grow: 1; /* बीच के स्पेस को भरता है */
+}
+.seat {
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid gold; /* Host frame */
+    box-shadow: 0 0 10px gold;
+}
+.username {
+    margin-top: 5px;
+    font-size: 14px;
+    color: white;
+}
+.empty-seat span {
+    display: inline-block;
     width: 50px;
     height: 50px;
-    background-size: cover;
-    opacity: 0;
-    animation: flyUpAndFade 3s ease-out forwards; 
+    border: 2px dashed #4a4a6b;
+    border-radius: 50%;
+    line-height: 46px;
+    font-size: 30px;
+    color: #4a4a6b;
+    cursor: pointer;
 }
 
-/* Gift Icons */
-/* NOTE: आपको 'assets/rose_icon.png' जैसी फाइलें अपने प्रोजेक्ट में जोड़नी होंगी */
-.gift-rose { background-color: pink; border-radius: 50%; left: 10%; } 
-.gift-rocket { background-color: orange; border-radius: 50%; left: 70%; }
-
-@keyframes flyUpAndFade {
-    0% { transform: translateY(0) scale(1); opacity: 0.5; }
-    50% { transform: translateY(-400px) scale(1.2); opacity: 1; }
-    100% { transform: translateY(-700px) scale(0.5); opacity: 0; }
-         }
-  
+/* --- Footer Controls --- */
+.footer-controls {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.btn {
+    background-color: #ff69b4;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.gift-btn {
+    background-color: #4CAF50;
+}
