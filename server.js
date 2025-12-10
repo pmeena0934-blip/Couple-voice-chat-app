@@ -1,4 +1,4 @@
-// server.js (Complete File - FIX for Mongoose User Model Loading Error)
+// server.js (Complete File - All Features & Login Fixes Applied)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,42 +6,33 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-// --- Import Models (FIX Applied Here) ---
-
-// **महत्वपूर्ण FIX:** Mongoose मॉडल कैशिंग समस्या को हल करने के लिए
-// यदि 'User' मॉडल पहले से लोड हो गया है, तो उसे हटाने का प्रयास करें।
-try {
-    if (mongoose.models.User) {
-        delete mongoose.models.User;
-    }
-} catch (e) {
-    console.warn("Could not delete Mongoose model cache for User during require:", e);
-}
-
-// अब सुरक्षित रूप से Import करें।
-const User = require('./models/User');
+// --- Import Models ---
+// models/User.js में फिक्स के कारण यह require अब सुरक्षित है।
+const User = require('./models/User'); 
 const Transaction = require('./models/Transaction');
 const Gift = require('./models/Gift'); 
 const Room = require('./models/Room'); 
 
-// --- Import Routes ---
+// --- Import Routes (walletRoutes फ़ाइल मौजूद होनी चाहिए) ---
+// यदि आपने routes/wallet.js नहीं बनाई है, तो यह लाइन एरर देगी।
 const walletRoutes = require('./routes/wallet');
 
-// --- Initial Gift Data Setup Function (UPDATED) ---
+// --- Initial Gift Data Setup Function ---
 async function setupInitialGifts() {
+    // सुनिश्चित करें कि Gift Model लोड हो चुका है
+    const GiftModel = mongoose.models.Gift || require('./models/Gift'); 
+    
     const defaultGifts = [
         { name: 'Rose', diamondCost: 10, category: 'Small', imageUrl: 'images/rose.png' },
         { name: 'Teddy Bear', diamondCost: 100, category: 'Medium', imageUrl: 'images/teddy.png' },
         { name: 'Luxury Car', diamondCost: 10000, category: 'Car', imageUrl: 'images/car.png' },
         { name: 'Super Rocket', diamondCost: 50000, category: 'SuperGift', imageUrl: 'images/rocket.png', isSuperGift: true },
-        // 10,00,000 Diamond Gift with CAR entry effect
         { name: 'Golden Dragon', diamondCost: 1000000, category: 'SuperGift', imageUrl: 'images/dragon.png', isSuperGift: true, entryEffect: 'car' }, 
         { name: 'Entrance Frame', diamondCost: 500, category: 'EntryEffect', imageUrl: 'images/frame.png' }
     ];
 
     for (const gift of defaultGifts) {
-        // Only insert/update if it doesn't exist/needs update
-        await Gift.updateOne({ name: gift.name }, gift, { upsert: true });
+        await GiftModel.updateOne({ name: gift.name }, gift, { upsert: true });
     }
     console.log('Default gifts ensured in database.');
 }
@@ -70,33 +61,48 @@ mongoose.connect(MONGODB_URI)
   })
   .catch(err => {
     console.error('MongoDB Atlas Connection Error:', err);
+    // CRITICAL: यदि कनेक्शन विफल होता है, तो सर्वर को ठीक से शुरू नहीं होना चाहिए
+    process.exit(1); 
   });
 
 // --- API Routes ---
 app.use('/api/wallet', walletRoutes);
 
 
-// ********** LOGIN API ROUTE **********
+// ********** LOGIN/REGISTRATION API ROUTE (Simplified Logic) **********
 app.post('/api/login', async (req, res) => {
     const { username } = req.body;
+
+    // सुनिश्चित करें कि डेटाबेस कनेक्टेड है
+    if (mongoose.connection.readyState !== 1) {
+        console.error('Login Error: Database is not connected.');
+        return res.status(503).json({ success: false, message: 'Server currently unavailable. Database connection failed.' });
+    }
 
     try {
         let user = await User.findOne({ username });
 
         if (!user) {
+            // Registration
             user = new User({ username });
             await user.save();
+            // यदि save() भी विफल हो जाता है, तो catch ब्लॉक संभालेगा
             return res.json({ success: true, message: 'Registration successful!', user });
         } else {
+            // Login
             return res.json({ success: true, message: 'Login successful!', user });
         }
     } catch (error) {
-        // यह एरर अब नहीं आनी चाहिए
-        console.error('Login/Registration Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during authentication.' });
+        console.error('Login/Registration Runtime Error:', error.message);
+        // यदि एरर "User.findOne is not a function" है, तो इसे विशेष रूप से दिखाएं।
+        if (error.message.includes('findOne is not a function')) {
+             res.status(500).json({ success: false, message: 'Internal Server Error: Model loading failed. Please check server logs.' });
+        } else {
+             res.status(500).json({ success: false, message: 'Server error during authentication: ' + error.message });
+        }
     }
 });
-// *************************************
+// *******************************************************************
 
 // ********** PROFILE AND ROOM EDIT API **********
 app.post('/api/profile/edit', async (req, res) => {
@@ -315,3 +321,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
+    
