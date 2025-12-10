@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 
 // --- Import Models (Ensure these models exist in models/ folder) ---
+// NOTE: Make sure models/User.js, models/Room.js, models/Transaction.js, models/Gift.js exist
 const User = require('./models/User'); 
 const Transaction = require('./models/Transaction'); 
 const Gift = require('./models/Gift'); 
@@ -16,8 +17,9 @@ const Room = require('./models/Room');
 const app = express();
 app.use(cors());
 app.use(express.json());
-// Serve static files from the 'public' directory
-app.use(express.static('public')); 
+
+// **CRITICAL FIX:** Serve static files correctly from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public'))); 
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -32,7 +34,6 @@ const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('MongoDB Atlas Connected');
-    // setupInitialGifts(); // You can uncomment this if you have the function defined
   })
   .catch(err => {
     console.error('MongoDB Atlas Connection Error:', err);
@@ -41,7 +42,7 @@ mongoose.connect(MONGODB_URI)
 
 // --- API Routes ---
 
-// ********** LOGIN/REGISTRATION API ROUTE (FIXED) **********
+// ********** LOGIN/REGISTRATION API ROUTE **********
 app.post('/api/login', async (req, res) => {
     const { username } = req.body;
     if (mongoose.connection.readyState !== 1) {
@@ -84,7 +85,7 @@ app.post('/api/room/create', async (req, res) => {
             roomId: Date.now().toString().slice(-5), 
             isVIP: false,
             // Add owner profile info for display in room list
-            ownerProfilePic: user.profilePic 
+            ownerProfilePic: user.profilePic || 'https://i.pravatar.cc/150?img=1'
         };
 
         if (isVIP) {
@@ -128,10 +129,8 @@ app.get('/api/rooms', async (req, res) => {
 
 // ********** ADMIN DASHBOARD API **********
 app.get('/api/admin/dashboard-data', async (req, res) => {
-    // SECURITY NOTE: This endpoint should be protected in a real app.
     try {
         const users = await User.find().select('username diamonds level profilePic').sort({ diamonds: -1 });
-        // NOTE: We assume Transaction Model/data exists here.
         const recentTransactions = await Transaction.find().sort({ createdAt: -1 }).limit(20);
         const totalUsers = await User.countDocuments();
         
@@ -150,23 +149,152 @@ app.get('/api/admin/dashboard-data', async (req, res) => {
 // *****************************************
 
 
-// ********** STATICS AND WILDCARD ROUTE (FIX for 404 on rooms.html) **********
+// --- Socket.io Logic ---
+
+// --- Active Room States (Simple in-memory store) ---
+const activeRooms = {}; // { roomId: { name: '...', ownerUsername: '...', micSlots: { 1: user, 2: null } } }
+
+io.on('connection', (socket) => {
+    console.log(`User connected: ${socket.id}`);
+    
+    // --- 1. Join Room ---
+    socket.on('joinRoom', async ({ roomId, username }) => {
+        socket.join(roomId);
+        socket.currentRoom = roomId;
+        socket.username = username;
+        
+        // Fetch room info (for owner name etc.)
+        const room = await Room.findOne({ roomId });
+        if (room) {
+             socket.emit('roomInfo', {
+                 name: room.name,
+                 roomId: room.roomId,
+                 ownerUsername: room.ownerUsername
+             });
+             
+             // Announce join to the room
+             io.to(roomId).emit('message', {
+                 type: 'system',
+                 text: `${username} has joined the room.`,
+                 username: 'System'
+             });
+
+             // Initialize activeRooms state if it doesn't exist
+             if (!activeRooms[roomId]) {
+                activeRooms[roomId] = { micSlots: {} };
+             }
+             
+             // Send initial mic state to the joining user
+             socket.emit('initialMicState', activeRooms[roomId].micSlots); 
+        }
+        console.log(`${username} joined room ${roomId}`);
+    });
+
+    // --- 2. Handle Chat Messages ---
+    socket.on('sendMessage', ({ roomId, username, text }) => {
+        io.to(roomId).emit('message', { type: 'chat', username, text });
+    });
+
+    // --- 3. Handle Gifts (Simplified) ---
+    socket.on('sendGift', async ({ roomId, username, giftName, diamondCost }) => {
+        // PRODUCTION NOTE: Here, you must deduct diamonds from the User model first!
+        
+        io.to(roomId).emit('message', {
+            type: 'gift',
+            username,
+            giftName,
+            text: `${username} sent a ${giftName}!`
+        });
+        
+        // Broadcast a diamond update if needed
+    });
+
+    // --- 4. Mic Slot Request (Simplified: Everyone can take an empty mic) ---
+    socket.on('requestMic', async ({ roomId, slot, username }) => {
+        if (!activeRooms[roomId] || activeRooms[roomId].micSlots[slot]) {
+            // Mic is already taken or room doesn't exist in memory
+            return;
+        }
+
+        const user = await User.findOne({ username });
+        const avatarUrl = user ? user.profilePic : 'https://i.pravatar.cc/150?img=10';
+
+        // Update mic state in memory
+        activeRooms[roomId].micSlots[slot] = { 
+            username: username,
+            avatar: avatarUrl,
+            socketId: socket.id
+        };
+
+        // Broadcast the update to all users in the room
+        io.to(roomId).emit('micUpdate', {
+            slot: slot,
+            user: username,
+            avatar: avatarUrl
+        });
+        
+        io.to(roomId).emit('message', {
+            type: 'system',
+            text: `${username} took Mic ${slot}.`,
+            username: 'System'
+        });
+    });
+    
+    // --- 5. Disconnect Logic (IMPORTANT) ---
+    socket.on('disconnect', () => {
+        if (socket.currentRoom) {
+            console.log(`${socket.username} left room ${socket.currentRoom}`);
+            
+            // Remove user from any mic slots they occupied
+            for (let slot in activeRooms[socket.currentRoom].micSlots) {
+                if (activeRooms[socket.currentRoom].micSlots[slot].socketId === socket.id) {
+                    delete activeRooms[socket.currentRoom].micSlots[slot];
+                    
+                    io.to(socket.currentRoom).emit('micUpdate', {
+                        slot: parseInt(slot),
+                        user: null,
+                        avatar: null
+                    });
+                    
+                    io.to(socket.currentRoom).emit('message', {
+                        type: 'system',
+                        text: `${socket.username} released Mic ${slot}.`,
+                        username: 'System'
+                    });
+                }
+            }
+        }
+    });
+});
+
+
+// ********** STATICS AND WILDCARD ROUTE (FIXED) **********
+app.get('/', (req, res) => {
+    // Root path always serves index.html
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Explicitly handle rooms.html
+app.get('/rooms.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rooms.html'));
+});
+
+// Explicitly handle room.html (The new Live Chat Page)
+app.get('/room.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'room.html'));
+});
+
+// Fallback for any other HTML files or paths (e.g., /admin.html)
+app.get('/*.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', req.path));
+});
+
+// Catch-all 404 handler
 app.get('*', (req, res) => {
-    if (req.path.includes('.')) {
-        res.sendFile(path.join(__dirname, 'public', req.path));
-    } 
-    else {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    }
+    res.status(404).send('File not found or API error.');
 });
 // ****************************************************************************
 
-// --- Socket.io Logic ---
-io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
-    // ... (rest of the socket logic)
-});
-
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
+  
