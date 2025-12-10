@@ -5,142 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diamond Recharge</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f4f7f6; 
-            color: #333; 
-            margin: 0; 
-            padding-bottom: 20px;
-        }
-        .header {
-            background-color: #ff69b4;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f7f6; color: #333; margin: 0; padding-bottom: 20px; }
+        .header { background-color: #ff69b4; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: space-between; }
         .header h1 { margin: 0; font-size: 1.5em; }
         .back-btn { color: white; font-size: 1.2em; text-decoration: none; padding: 5px; }
-
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-        
-        /* --- Current Balance --- */
-        .balance-card {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .balance-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .balance-card span { font-size: 1.2em; font-weight: bold; color: #00bcd4; }
-
-        /* --- Recharge Plans Grid --- */
-        .plans-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .plan-card {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .plan-card.selected {
-            border-color: #ff69b4;
-            background-color: #ffe6f0;
-        }
-        .plan-card h3 { 
-            margin-top: 0; 
-            color: #00bcd4; 
-            font-size: 1.4em; 
-        }
-        .plan-card p { 
-            margin: 5px 0 10px; 
-            font-size: 0.9em; 
-            color: #777; 
-        }
-        .plan-card button {
-            background-color: #ff69b4;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            width: 100%;
-            font-weight: bold;
-        }
-
-        /* --- Payment Details Section --- */
-        .payment-section {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .payment-section h2 { color: #5c677d; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        
-        .qr-code-box {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            border: 1px dashed #ccc;
-            border-radius: 8px;
-        }
-        .qr-code-box img {
-            max-width: 80%;
-            height: auto;
-        }
-        
-        /* --- Form Section --- */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-        .form-group input[type="text"], 
-        .form-group input[type="file"],
-        .form-group button {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-        .form-group button {
-            background-color: #00bcd4;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1em;
-            margin-top: 10px;
-        }
-        
-        #previewImage {
-            max-width: 100%;
-            max-height: 150px;
-            margin-top: 10px;
-            display: none;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
+        .plans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .plan-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .plan-card.selected { border-color: #ff69b4; background-color: #ffe6f0; }
+        .plan-card h3 { margin-top: 0; color: #00bcd4; font-size: 1.4em; }
+        .plan-card p { margin: 5px 0 10px; font-size: 0.9em; color: #777; }
+        .plan-card button { background-color: #ff69b4; color: white; border: none; padding: 8px 15px; border-radius: 20px; width: 100%; font-weight: bold; }
+        .payment-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .qr-code-box { text-align: center; margin: 15px 0; padding: 10px; border: 1px dashed #ccc; border-radius: 8px; }
+        .qr-code-box img { max-width: 80%; height: auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        .form-group input[type="text"], .form-group input[type="file"], .form-group button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .form-group button { background-color: #00bcd4; color: white; border: none; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
+        #previewImage { max-width: 100%; max-height: 150px; margin-top: 10px; display: none; border: 1px solid #ddd; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -164,10 +49,11 @@
         <div class="qr-code-box">
             <p>Scan this QR Code for payment:</p>
             <img id="qrCodeImage" src="https://via.placeholder.com/250x250/5c677d/ffffff?text=YOUR+UPI+QR+CODE" alt="UPI QR Code">
-            <p style="font-size: 0.9em; color: #ff69b4;">(Pay the amount corresponding to the selected plan)</p>
+            <p style="font-size: 0.9em; color: #ff69b4;">UPI ID: **poojamahta67-1@okicici**</p>
+            <p style="font-size: 0.9em; color: #ff69b4;">(Pay the exact amount corresponding to the selected plan)</p>
         </div>
 
-        <h2>2. Submit Request</h2>
+        <h2>2. Submit Payment Details</h2>
         <form id="rechargeForm">
             <input type="hidden" id="selectedPlanId">
             <div class="form-group">
@@ -182,12 +68,12 @@
 
             <div class="form-group">
                 <label for="utrNumber">UTR / Transaction ID:</label>
-                <input type="text" id="utrNumber" placeholder="Enter 12 or 14 digit UTR number" required>
+                <input type="text" id="utrNumber" name="utrNumber" placeholder="Enter 12 or 14 digit UTR number" required>
             </div>
 
             <div class="form-group">
                 <label for="screenshot">Payment Screenshot:</label>
-                <input type="file" id="screenshotFile" accept="image/*" required onchange="previewScreenshot(event)">
+                <input type="file" id="screenshotFile" name="screenshot" accept="image/*" required onchange="previewScreenshot(event)">
                 <img id="previewImage" alt="Payment Screenshot Preview">
             </div>
 
@@ -203,7 +89,7 @@
     let currentUser = JSON.parse(localStorage.getItem('currentUser'));
     let selectedPlan = null;
     
-    // --- Sample Diamond Plans (You can fetch these from API later) ---
+    // Diamond Plans (As requested: 600 Diamonds for ₹200)
     const DIAMOND_PLANS = [
         { id: 'P01', diamonds: 600, price: 200, bonus: 0 },
         { id: 'P02', diamonds: 1200, price: 400, bonus: 50 },
@@ -218,10 +104,8 @@
         document.getElementById('currentDiamondBalance').textContent = currentUser.diamonds;
     }
 
-    // --- Plan Rendering ---
     function renderPlans() {
         const grid = document.getElementById('plansGrid');
-        grid.innerHTML = '';
         DIAMOND_PLANS.forEach(plan => {
             const totalDiamonds = plan.diamonds + plan.bonus;
             const card = document.createElement('div');
@@ -237,23 +121,17 @@
         });
     }
     
-    // --- Plan Selection ---
     function selectPlan(plan) {
-        // Deselect all
         document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
-        // Select current
         document.querySelector(`.plan-card[data-id="${plan.id}"]`).classList.add('selected');
         
         selectedPlan = plan;
         
-        // Update form display
-        document.getElementById('selectedPlanId').value = plan.id;
         document.getElementById('diamondAmountDisplay').value = (plan.diamonds + plan.bonus) + ' Diamonds';
         document.getElementById('paidAmountDisplay').value = '₹ ' + plan.price;
         document.getElementById('submitButton').disabled = false;
     }
 
-    // --- Screenshot Preview ---
     function previewScreenshot(event) {
         const file = event.target.files[0];
         const preview = document.getElementById('previewImage');
@@ -266,7 +144,6 @@
         }
     }
 
-    // --- Form Submission ---
     document.getElementById('rechargeForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -279,11 +156,7 @@
         const screenshotFile = document.getElementById('screenshotFile').files[0];
         
         if (utrNumber.length < 10) {
-            alert('Please enter a valid UTR/Transaction ID.');
-            return;
-        }
-        if (!screenshotFile) {
-            alert('Please upload the payment screenshot.');
+            alert('Please enter a valid UTR/Transaction ID (usually 12-14 digits).');
             return;
         }
         
@@ -292,24 +165,21 @@
 
         const formData = new FormData();
         formData.append('username', currentUser.username);
-        formData.append('planId', selectedPlan.id);
         formData.append('paidAmount', selectedPlan.price);
         formData.append('diamondAmount', selectedPlan.diamonds + selectedPlan.bonus);
         formData.append('utrNumber', utrNumber);
-        formData.append('screenshot', screenshotFile);
+        formData.append('screenshot', screenshotFile); // 'screenshot' is the field name used by multer in server.js
 
         try {
-            // **API Call to the Server**
             const response = await fetch('/api/recharge/request', {
                 method: 'POST',
-                body: formData // FormData handles multipart/form-data
+                body: formData 
             });
 
             const data = await response.json();
             
             if (data.success) {
-                document.getElementById('submissionMessage').textContent = '✅ Recharge request submitted successfully! Diamonds will be added after manual verification.';
-                // Reset form fields
+                document.getElementById('submissionMessage').textContent = '✅ Recharge request submitted! Verification pending.';
                 document.getElementById('rechargeForm').reset();
                 document.getElementById('previewImage').style.display = 'none';
                 document.getElementById('submitButton').disabled = true;
@@ -330,7 +200,5 @@
 
     renderPlans();
 </script>
-
 </body>
-  </html>
-  
+</html>
