@@ -3,325 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Voice Room</title>
+    <title id="roomTitle">Voice Room - Loading...</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
+        :root {
+            --primary-color: #ff69b4; /* Pink */
+            --secondary-color: #00bcd4; /* Cyan/Diamond */
+            --background-color: #f4f7f6;
+            --chat-bg: #fff;
+            --mic-bg: #5c677d; /* Dark Grey for Mic */
+            --sit-bg: #e0e0e0;
+        }
         body { 
             font-family: Arial, sans-serif; 
-            background: linear-gradient(180deg, #1f083d 0%, #3e1b6d 100%); 
-            color: white; 
+            background: var(--background-color); 
             margin: 0; 
-            padding-bottom: 50px; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
         }
-        
-        /* --- Top Bar --- */
-        .top-bar {
+
+        /* --- Header and Room Info --- */
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 15px;
-            background: rgba(0, 0, 0, 0.3);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
-        .room-details h2 { margin: 0; font-size: 1.2em; }
-        .room-details p { margin: 0; font-size: 0.8em; color: #bbb; }
-        .back-btn, .settings-btn { 
-            color: white; 
-            font-size: 1.5em; 
-            text-decoration: none; 
-            padding: 5px; 
-        }
-
-        /* --- Mic Slots Container --- */
-        .mic-container {
-            padding: 15px;
-            max-width: 650px; /* Increased max-width for 5 columns */
-            margin: 0 auto;
-        }
-
-        /* --- Special (Owner/Admin) Slots (2 Slots) --- */
-        .special-mics {
-            display: flex;
-            justify-content: center; /* Center the two main slots */
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .mic-slot.special {
-            width: 120px; /* Slightly larger */
-            height: 120px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 3px solid #ff69b4; /* Pink border for Owner/Admin */
-            box-shadow: 0 0 10px #ff69b4;
-        }
-        .mic-slot.special .user-avatar { 
-            width: 80px; 
-            height: 80px;
-            border: 4px solid #fff;
-        }
-        .mic-slot.special .user-name { font-size: 1em; font-weight: bold; }
-
-
-        /* --- General Slots (13 Slots) --- */
-        .general-mics {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 columns for the 13 slots (5+5+3) */
-            gap: 10px;
-        }
-        
-        /* --- Generic Mic Slot Style --- */
-        .mic-slot {
-            position: relative;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            text-align: center;
-            padding: 10px 5px;
-            height: 80px; /* Slightly reduced height to fit more slots */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            border: 2px solid transparent;
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
-        }
-        .mic-slot.occupied { border-color: #ffc107; } /* Active user glow */
-
-        .mic-number { 
-            position: absolute; 
-            top: 5px; 
-            left: 5px; 
-            font-size: 0.7em; 
-            background: rgba(0,0,0,0.5); 
+        .header h1 { margin: 0; font-size: 1.2em; max-width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .room-level-info { 
+            background: var(--secondary-color); 
+            padding: 5px 10px; 
             border-radius: 5px; 
-            padding: 2px 5px; 
-        }
-        .user-avatar { 
-            width: 40px; /* Reduced size for 5 columns */
-            height: 40px; 
-            border-radius: 50%; 
-            background: #999; 
-            margin-bottom: 5px;
-            object-fit: cover;
-            border: 2px solid #fff; 
-        }
-        .user-name { font-size: 0.7em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-        
-        /* --- Chat/Gift Section --- */
-        .chat-container {
-            position: fixed;
-            bottom: 50px;
-            left: 0;
-            right: 0;
-            height: 180px; /* Reduced height to provide space */
-            background: rgba(0, 0, 0, 0.4);
-            padding: 10px;
-            overflow-y: scroll;
-            display: flex;
-            flex-direction: column-reverse;
+            font-weight: bold; 
             font-size: 0.9em;
         }
-        .chat-message { margin-bottom: 5px; word-wrap: break-word; }
-        .chat-message strong { color: #ffc107; }
-        .chat-message.system { color: #87ceeb; }
-        .chat-message.gift { color: #ff69b4; font-weight: bold; }
 
-        /* --- Bottom Controls --- */
-        .controls-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #222;
+        /* --- Main Content Area --- */
+        .main-content {
             display: flex;
-            padding: 10px 15px;
-            align-items: center;
+            flex-grow: 1;
+            overflow: hidden;
         }
-        .controls-bar input {
+
+        /* --- Mic Grid (The 15 Seats) --- */
+        .mic-area {
+            flex: 2; /* Takes up more space */
+            padding: 15px;
+            background-color: var(--mic-bg);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columns for mics */
+            gap: 10px;
+            overflow-y: auto;
+        }
+        .mic-slot {
+            height: 100px; /* Fixed height for slots */
+            background: var(--sit-bg);
+            border-radius: 8px;
+            text-align: center;
+            padding: 5px;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background 0.2s;
+            border: 2px solid transparent;
+        }
+        .mic-slot.occupied {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+        .mic-slot:hover:not(.occupied) {
+            background: #ccc;
+        }
+        .mic-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
+            border: 2px solid #fff;
+        }
+        .mic-number { 
+            position: absolute; 
+            top: 3px; 
+            left: 3px; 
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 0.7em; 
+            padding: 2px 5px; 
+            border-radius: 3px;
+        }
+        .mic-username { 
+            font-size: 0.8em; 
+            display: block; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        
+        /* Highlight Owner Slot (Mic 1) */
+        #mic-1 { border: 3px solid gold; }
+
+
+        /* --- Chat Area --- */
+        .chat-area {
+            flex: 1; /* Takes up less space than mic area */
+            background: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #ddd;
+        }
+        .messages {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 50vh; /* Limits chat height */
+        }
+        .message {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .message strong { color: var(--primary-color); }
+        .gift-message { color: var(--secondary-color); font-weight: bold; }
+        .system-message { color: #777; font-style: italic; }
+
+        .chat-input {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+        }
+        .chat-input input[type="text"] {
             flex-grow: 1;
             padding: 8px;
-            border: none;
-            border-radius: 20px;
-            margin-right: 10px;
-            background: #333;
-            color: white;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
         }
-        .controls-bar button {
-            background: #ff69b4;
+        .chat-input button {
+            background-color: var(--primary-color);
             color: white;
             border: none;
             padding: 8px 15px;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+
+        /* --- Footer (Controls and Gifting) --- */
+        .footer-controls {
+            background: #fff;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .control-btn {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
             border-radius: 20px;
             cursor: pointer;
-            margin-right: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: background 0.2s;
         }
+        .control-btn:hover { background: #0097a7; }
+        
+        /* Gifting Panel */
+        #giftPanel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+            z-index: 50;
+        }
+        #giftPanel.visible {
+            transform: translateY(0);
+        }
+        .gift-grid {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .gift-item {
+            flex-shrink: 0;
+            text-align: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .gift-item.selected {
+            border-color: var(--primary-color);
+            background: #ffe6f0;
+        }
+        .gift-item img {
+            width: 50px;
+            height: 50px;
+        }
+        .gift-info { font-size: 0.8em; margin-top: 5px; }
+        .gift-send-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .gift-send-controls button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #quantityInput { width: 50px; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; }
+        .current-diamond-balance { font-weight: bold; color: var(--secondary-color); }
     </style>
 </head>
 <body>
 
-<div class="top-bar">
-    <a href="/rooms.html" class="back-btn">⬅️</a>
-    <div class="room-details">
-        <h2 id="roomName">Loading Room...</h2>
-        <p id="roomIdDisplay">ID: XXXX | Owner: ---</p>
-    </div>
-    <a href="#" class="settings-btn">⚙️</a>
+<div class="header">
+    <a href="/rooms.html" style="color: white; text-decoration: none;">⬅️ Back</a>
+    <h1 id="currentRoomName">Loading Room...</h1>
+    <div id="roomLevelInfo" class="room-level-info">LVL 0</div>
 </div>
 
-<div class="mic-container">
-    <div class="special-mics" id="specialMics">
+<div class="main-content">
+    <div class="mic-area" id="micArea">
         </div>
-
-    <div class="general-mics" id="generalMics">
-        </div>
-</div>
-
-<div class="chat-container" id="chatContainer">
-    </div>
-
-<div class="controls-bar">
-    <input type="text" id="chatInput" placeholder="Type a message...">
-    <button onclick="sendChatMessage()">Send</button>
-    <button onclick="sendGift()">🎁 Gift</button>
-</div>
-
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    const chatContainer = document.getElementById('chatContainer');
-    const specialMicsDiv = document.getElementById('specialMics');
-    const generalMicsDiv = document.getElementById('generalMics');
     
-    // --- 1. Load Room and User Info ---
+    <div class="chat-area">
+        <div class="messages" id="messages">
+            </div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Send a message..." maxlength="100">
+            <button id="sendChatBtn">Send</button>
+        </div>
+    </div>
+</div>
+
+<div class="footer-controls">
+    <button id="toggleGiftPanelBtn" class="control-btn">🎁 Send Gift</button>
+    <button id="musicControlBtn" class="control-btn" disabled>🎵 Play Music (Coming Soon)</button>
+    <span id="userDiamondFooter" class="current-diamond-balance">💎 0</span>
+</div>
+
+<div id="giftPanel">
+    <h3>Select Gift to Send</h3>
+    <div class="gift-grid" id="giftGrid">
+        </div>
+    <div class="gift-send-controls">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label for="quantityInput">Quantity:</label>
+            <input type="number" id="quantityInput" value="1" min="1" max="100" disabled>
+        </div>
+        <button id="sendGiftFinalBtn" disabled>Send (0 💎)</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = ''; // Same domain
+    const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('id');
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    let selectedGift = null;
+    let roomOwner = ''; // To highlight the owner's name/mic
 
-    if (!roomId || !currentUser) {
-        alert("Invalid room access or not logged in.");
+    // --- Gift Definitions (Must match the gifts in your database logic) ---
+    const GIFTS = [
+        { name: 'Rose', cost: 10, imageUrl: 'https://i.ibb.co/L519W3P/rose.png' },
+        { name: 'Heart', cost: 100, imageUrl: 'https://i.ibb.co/3086x3M/heart.png' },
+        { name: 'Car', cost: 1000, imageUrl: 'https://i.ibb.co/p37160p/car.png' },
+        { name: 'Yacht', cost: 10000, imageUrl: 'https://i.ibb.co/2k90D37/yacht.png' }
+    ];
+    const MAX_SIT_SLOTS = 15; // Max seats in a standard room
+
+    if (!currentUser || !roomId) {
+        alert('Invalid access. Please log in and select a room.');
         window.location.href = '/rooms.html';
     }
 
-    // --- 2. Mic Slot Generation (2 Special + 13 General = 15 Total) ---
-    function createMicSlot(i, isSpecial) {
-        const slot = document.createElement('div');
-        slot.className = 'mic-slot';
-        if (isSpecial) {
-            slot.className += ' special';
-        }
-        slot.id = `mic-${i}`;
-        
-        let defaultName = 'Empty';
-        if (i === 1) defaultName = 'Owner';
-        if (i === 2) defaultName = 'Admin';
-
-        slot.innerHTML = `
-            <span class="mic-number">Mic ${i}</span>
-            <img class="user-avatar" src="https://i.pravatar.cc/150?img=0" alt="Empty Slot">
-            <p class="user-name">${defaultName}</p>
-        `;
-        slot.onclick = () => joinMicSlot(i, isSpecial);
-        return slot;
-    }
-
-    // Generate Special Slots (1 & 2)
-    specialMicsDiv.appendChild(createMicSlot(1, true));
-    specialMicsDiv.appendChild(createMicSlot(2, true));
-
-    // Generate General Slots (3 to 15)
-    for (let i = 3; i <= 15; i++) {
-        generalMicsDiv.appendChild(createMicSlot(i, false));
-    }
-
-    // --- 3. Socket.IO Logic ---
-
-    // Send Join Request to Server
-    socket.emit('joinRoom', { roomId, username: currentUser.username });
-
-    // Handle initial room details and owner/admin display
-    socket.on('roomInfo', (data) => {
-        document.getElementById('roomName').textContent = data.name;
-        document.getElementById('roomIdDisplay').textContent = `ID: ${data.roomId} | Owner: ${data.ownerUsername}`;
-        
-        // Auto-assign owner to Mic 1 (This logic should be finalized on the server)
-        if (data.ownerUsername === currentUser.username) {
-            // If the user is the owner, automatically request Mic 1
-            joinMicSlot(1, true); 
-        }
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        setupMicSlots();
+        renderGifts();
+        updateDiamondDisplay(currentUser.diamonds);
+        socket.emit('joinRoom', { roomId: roomId, username: currentUser.username });
     });
 
-    socket.on('message', (message) => {
-        const msgElement = document.createElement('div');
-        msgElement.className = 'chat-message';
-        
-        if (message.type === 'gift') {
-             msgElement.className += ' gift';
-             msgElement.innerHTML = `🎁 <strong>${message.username}</strong> sent a gift to the room!`;
-        } else if (message.type === 'system') {
-             msgElement.className += ' system';
-             msgElement.innerHTML = `${message.text}`;
-        } else {
-             msgElement.innerHTML = `<strong>${message.username}:</strong> ${message.text}`;
-        }
-        
-        chatContainer.prepend(msgElement); 
-    });
+    // --- UI/Data Functions ---
+    function updateDiamondDisplay(balance) {
+        document.getElementById('userDiamondFooter').textContent = `💎 ${balance}`;
+        currentUser.diamonds = balance;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    }
     
-    // Handle Mic Updates
-    socket.on('micUpdate', (micState) => {
-        const slotElement = document.getElementById(`mic-${micState.slot}`);
-        if (!slotElement) return;
-
-        if (micState.user) {
-            slotElement.classList.add('occupied');
-            slotElement.querySelector('.user-name').textContent = micState.user;
-            slotElement.querySelector('.user-avatar').src = micState.avatar || 'https://i.pravatar.cc/150?img=10';
-        } else {
-            const isSpecial = micState.slot <= 2;
-            slotElement.classList.remove('occupied');
-            slotElement.querySelector('.user-name').textContent = isSpecial ? (micState.slot === 1 ? 'Owner' : 'Admin') : 'Empty';
-            slotElement.querySelector('.user-avatar').src = 'https://i.pravatar.cc/150?img=0';
-        }
-    });
-
-    // --- 4. User Interaction Functions ---
-
-    function joinMicSlot(slotNumber, isSpecial) {
-        const ownerUsername = document.getElementById('roomIdDisplay').textContent.split(' | Owner: ')[1];
+    function appendMessage(type, username, text) {
+        const messagesDiv = document.getElementById('messages');
+        const msgEl = document.createElement('p');
+        msgEl.className = 'message';
         
-        if (isSpecial && slotNumber === 1 && currentUser.username !== ownerUsername) {
-            alert('Mic 1 is reserved for the Room Owner.');
-            return;
+        switch (type) {
+            case 'chat':
+                msgEl.innerHTML = `<strong>${username}:</strong> ${text}`;
+                break;
+            case 'gift':
+                msgEl.className += ' gift-message';
+                msgEl.innerHTML = `🎁 ${username} sent ${text} to the room owner!`;
+                break;
+            case 'system':
+                msgEl.className += ' system-message';
+                msgEl.textContent = text;
+                break;
         }
-        if (slotNumber === 2 && currentUser.username !== ownerUsername) {
-            alert('Mic 2 is reserved for the Admin/Co-Host. Only the room owner or authorized admin can join this mic.');
-            // For general users, we allow the request but the server logic should block it later.
-        }
-
-        socket.emit('requestMic', { roomId, slot: slotNumber, username: currentUser.username });
-        console.log(`Requesting Mic ${slotNumber}.`);
+        
+        messagesDiv.appendChild(msgEl);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
     }
 
-    function sendChatMessage() {
-        const input = document.getElementById('chatInput');
-        const text = input.value.trim();
-        if (text) {
-            socket.emit('sendMessage', { roomId, username: currentUser.username, text });
-            input.value = '';
+    function setupMicSlots() {
+        const micArea = document.getElementById('micArea');
+        micArea.innerHTML = '';
+        
+        for (let i = 1; i <= MAX_SIT_SLOTS; i++) {
+            const slotEl = document.createElement('div');
+            slotEl.className = 'mic-slot';
+            slotEl.id = `mic-${i}`;
+            slotEl.setAttribute('data-slot', i);
+            slotEl.onclick = () => requestMic(i);
+            
+            slotEl.innerHTML = `
+                <span class="mic-number">#${i}</span>
+                <img class="mic-img" src="https://i.pravatar.cc/150?img=6" alt="Sit" />
+                <span class="mic-username">Tap to Sit</span>
+            `;
+            micArea.appendChild(slotEl);
         }
     }
 
-    function sendGift() {
-        alert('Sending Gift (Requires Diamond deduction logic on server)');
-        socket.emit('sendGift', { 
-            roomId, 
-            username: currentUser.username, 
-            giftName: 'Rose', 
-            diamondCost: 10 
+    function updateMicSlot(slot, user, avatar) {
+        const slotEl = document.getElementById(`mic-${slot}`);
+        if (!slotEl) return;
+        
+        const imgEl = slotEl.querySelector('.mic-img');
+        const nameEl = slotEl.querySelector('.mic-username');
+        
+        if (user) {
+            slotEl.classList.add('occupied');
+            imgEl.src = avatar;
+            nameEl.textContent = user;
+        } else {
+            slotEl.classList.remove('occupied');
+            imgEl.src = 'https://i.pravatar.cc/150?img=6'; // Default image
+            nameEl.textContent = 'Tap to Sit';
+        }
+    }
+
+    // --- Gifting Panel Logic ---
+    function renderGifts() {
+        const grid = document.getElementById('giftGrid');
+        grid.innerHTML = '';
+        GIFTS.forEach(gift => {
+            const item = document.createElement('div');
+            item.className = 'gift-item';
+            item.setAttribute('data-name', gift.name);
+            item.onclick = () => selectGift(gift);
+            
+            item.innerHTML = `
+                <img src="${gift.imageUrl}" alt="${gift.name}">
+                <div class="gift-info">${gift.name} (${gift.cost} 💎)</div>
+            `;
+            grid.appendChild(item);
         });
     }
 
-</script>
+    function selectGift(gift) {
+        document.querySelectorAll('.gift-item').forEach(item => item.classList.remove('selected'));
+        document.querySelector(`.gift-item[data-name="${gift.name}"]`).classList.add('selected');
+        
+        selectedGift = gift;
+        
+        document.getElementById('quantityInput').disabled = false;
+        document.getElementById('quantityInput').value = 1;
+        updateGiftSendButton();
+    }
+    
+    function updateGiftSendButton() {
+        const sendBtn = document.getElementById('sendGiftFinalBtn');
+        const quantityInput = document.getElementById('quantityInput');
+        const quantity = parseInt(quantityInput.value) || 1;
+        
+        if (selectedGift) {
+            const totalCost = selectedGift.cost * quantity;
+            sendBtn.textContent = `Send (${totalCost} 💎)`;
+            sendBtn.disabled = totalCost > currentUser.diamonds;
+        } else {
+            sendBtn.textContent = 'Send (0 💎)';
+            sendBtn.disabled = true;
+        }
+    }
+    
+    // --- Event Listeners ---
+    document.getElementById('toggleGiftPanelBtn').onclick = () => {
+        const panel = document.getElementById('giftPanel');
+        panel.classList.toggle('visible');
+    };
+    
+    document.getElementById('quantityInput').addEventListener('input', updateGiftSendButton);
 
+    document.getElementById('sendChatBtn').onclick = () => {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (text) {
+            socket.emit('sendMessage', { roomId: roomId, username: currentUser.username, text: text });
+            input.value = '';
+        }
+    };
+    
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('sendChatBtn').click();
+        }
+    });
+
+    document.getElementById('sendGiftFinalBtn').onclick = () => {
+        if (!selectedGift) return alert('Please select a gift first.');
+        const quantity = parseInt(document.getElementById('quantityInput').value) || 1;
+        const totalCost = selectedGift.cost * quantity;
+        
+        if (totalCost > currentUser.diamonds) {
+            return alert('Insufficient diamonds. Please recharge.');
+        }
+
+        if (confirm(`Send ${quantity}x ${selectedGift.name} for ${totalCost} Diamonds?`)) {
+            socket.emit('sendGift', { 
+                roomId: roomId, 
+                username: currentUser.username, 
+                giftName: selectedGift.name, 
+                diamondCost: selectedGift.cost, 
+                quantity: quantity 
+            });
+            // Hide panel after sending
+            document.getElementById('giftPanel').classList.remove('visible');
+        }
+    };
+
+    // --- Socket Logic ---
+
+    socket.on('connect', () => {
+        console.log('Connected to server. Joining room...');
+    });
+
+    socket.on('roomInfo', (info) => {
+        document.getElementById('roomTitle').textContent = info.name;
+        document.getElementById('currentRoomName').textContent = info.name;
+        document.getElementById('roomLevelInfo').textContent = `LVL ${info.roomLevel}`;
+        roomOwner = info.ownerUsername;
+        appendMessage('system', 'System', `Joined room: ${info.name}. Room Owner: ${roomOwner}`);
+    });
+    
+    socket.on('initialMicState', (micSlots) => {
+        for (const slot in micSlots) {
+            const { username, avatar } = micSlots[slot];
+            updateMicSlot(slot, username, avatar);
+        }
+    });
+
+    socket.on('message', (msg) => {
+        appendMessage(msg.type, msg.username, msg.text);
+    });
+
+    socket.on('micUpdate', ({ slot, user, avatar }) => {
+        updateMicSlot(slot, user, avatar);
+    });
+    
+    socket.on('diamondUpdate', ({ newBalance, newLevel }) => {
+        updateDiamondDisplay(newBalance);
+        // Note: Client should refresh profile page to see the level update fully, but we show the balance immediately.
+        // For a full app, you would update the user's level on the footer too.
+        if (newLevel) {
+            currentUser.level = newLevel;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+    });
+
+    // --- Mic Request Handler ---
+    function requestMic(slot) {
+        // Prevent sitting if you are the owner and slot 1 is reserved for you (owner logic is primarily server-side)
+        if (document.getElementById(`mic-${slot}`).classList.contains('occupied')) {
+            // Logic to step down or mute/unmute should be here (complex for frontend only)
+            // For now, only allow stepping up.
+            return;
+        }
+        
+        if (confirm(`Requesting Mic Slot #${slot}. Continue?`)) {
+             // Send request to server. Server handles all checks (15 sit limit, owner slot etc.)
+            socket.emit('requestMic', {
+                roomId: roomId,
+                slot: slot,
+                username: currentUser.username
+            });
+        }
+    }
+
+</script>
 </body>
     </html>
     
