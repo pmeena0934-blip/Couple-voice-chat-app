@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = {
-  User: mongoose.model('User', UserSchema),
-};
+// ********** [बदलाव: मॉडल एक्सपोर्ट को ठीक किया गया] **********
+module.exports = mongoose.model('User', UserSchema); 
+// अब यह सीधे Mongoose मॉडल को एक्सपोर्ट करता है, जिससे server.js में findOne() काम करेगा।
+// ************************************************************
