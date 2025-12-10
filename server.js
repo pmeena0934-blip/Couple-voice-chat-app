@@ -1,4 +1,4 @@
-// server.js (Complete File - UPDATED with UPI Payment Logic)
+// server.js (Complete File - UPDATED with Gift & Room Models)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -8,17 +8,35 @@ const path = require('path');
 
 // --- Import Models ---
 const User = require('./models/User');
-const Transaction = require('./models/Transaction'); // New Transaction Model
+const Transaction = require('./models/Transaction');
+const Gift = require('./models/Gift'); // New Gift Model
+const Room = require('./models/Room'); // New Room Model
 
 // --- Import Routes ---
 const walletRoutes = require('./routes/wallet');
+
+// --- Initial Gift Data Setup Function ---
+async function setupInitialGifts() {
+    const defaultGifts = [
+        { name: 'Rose', diamondCost: 10, category: 'Small', imageUrl: 'images/rose.png' },
+        { name: 'Teddy Bear', diamondCost: 100, category: 'Medium', imageUrl: 'images/teddy.png' },
+        { name: 'Luxury Car', diamondCost: 10000, category: 'Car', imageUrl: 'images/car.png' },
+        { name: 'Super Rocket', diamondCost: 50000, category: 'SuperGift', imageUrl: 'images/rocket.png', isSuperGift: true },
+        { name: 'Golden Dragon', diamondCost: 1000000, category: 'SuperGift', imageUrl: 'images/dragon.png', isSuperGift: true },
+        { name: 'Entrance Frame', diamondCost: 500, category: 'EntryEffect', imageUrl: 'images/frame.png' }
+    ];
+
+    for (const gift of defaultGifts) {
+        // Only insert if it doesn't exist
+        await Gift.updateOne({ name: gift.name }, gift, { upsert: true });
+    }
+    console.log('Default gifts ensured in database.');
+}
 
 // --- App Setup ---
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// पब्लिक फ़ोल्डर को स्टैटिकली सर्व करें
 app.use(express.static('public'));
 
 const server = http.createServer(app);
@@ -26,21 +44,23 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-// Socket.io इंस्टेंस को routes से access करने के लिए सेट करें
 app.set('socketio', io);
 
 // --- Database Connection ---
 const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB Atlas Connected'))
+  .then(() => {
+    console.log('MongoDB Atlas Connected');
+    setupInitialGifts(); // Initialize gifts after connection
+  })
   .catch(err => {
-    console.error('MongoDB Atlas Connection Error:');
-    console.error(err);
+    console.error('MongoDB Atlas Connection Error:', err);
   });
 
 // --- API Routes ---
 app.use('/api/wallet', walletRoutes);
+
 
 // ********** LOGIN API ROUTE **********
 app.post('/api/login', async (req, res) => {
@@ -50,12 +70,10 @@ app.post('/api/login', async (req, res) => {
         let user = await User.findOne({ username });
 
         if (!user) {
-            // New user, create and give 500 diamonds (Default from User model)
             user = new User({ username });
             await user.save();
             return res.json({ success: true, message: 'Registration successful!', user });
         } else {
-            // Existing user
             return res.json({ success: true, message: 'Login successful!', user });
         }
     } catch (error) {
@@ -68,33 +86,23 @@ app.post('/api/login', async (req, res) => {
 // ********** PROFILE AND ROOM EDIT API **********
 app.post('/api/profile/edit', async (req, res) => {
     const { username, newUsername, newRoomName, newProfilePicUrl } = req.body;
-
+    // ... (same as previous server.js logic) ...
     try {
         let user = await User.findOne({ username });
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-        
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
         let updateFields = {};
         
         if (newUsername && newUsername !== user.username) {
             const existingUser = await User.findOne({ username: newUsername });
-            if (existingUser) {
-                return res.status(400).json({ success: false, message: 'New username already taken.' });
-            }
+            if (existingUser) return res.status(400).json({ success: false, message: 'New username already taken.' });
             updateFields.username = newUsername;
         }
-
-        if (newProfilePicUrl) {
-            updateFields.profilePic = newProfilePicUrl; 
-        }
-
-        if (newRoomName) {
-            updateFields.roomName = newRoomName; 
-        }
+        if (newProfilePicUrl) updateFields.profilePic = newProfilePicUrl; 
+        if (newRoomName) updateFields.roomName = newRoomName; 
         
         const updatedUser = await User.findOneAndUpdate({ username }, { $set: updateFields }, { new: true });
+        // Also update the Room name if this user owns a room
+        await Room.updateOne({ ownerUsername: username }, { name: updatedUser.roomName });
 
         return res.json({ success: true, message: 'Profile updated successfully!', user: updatedUser });
 
@@ -105,37 +113,21 @@ app.post('/api/profile/edit', async (req, res) => {
 });
 // ***********************************************
 
-// ********** DIAMOND PURCHASE API (User Submission - NEW) **********
+// ********** DIAMOND PURCHASE API (User Submission) **********
 app.post('/api/buy-diamonds', async (req, res) => {
-    // Note: Payment package is 500 Diamonds for 200 Rs (Hardcoded for demo)
     const { username, utrNumber, screenshotUrl } = req.body;
     const diamondAmount = 500;
     const fiatAmount = 200;
-
-    if (!username || !utrNumber || !screenshotUrl) {
-        return res.status(400).json({ success: false, message: 'Username, UTR, and Screenshot URL are required.' });
-    }
+    
+    if (!username || !utrNumber || !screenshotUrl) return res.status(400).json({ success: false, message: 'Required fields missing.' });
 
     try {
-        // Check if UTR number is already in process
         const existingTransaction = await Transaction.findOne({ utrNumber });
-        if (existingTransaction) {
-            return res.status(400).json({ success: false, message: 'This UTR number is already recorded.' });
-        }
+        if (existingTransaction) return res.status(400).json({ success: false, message: 'This UTR number is already recorded.' });
 
-        const newTransaction = new Transaction({
-            username,
-            diamondAmount,
-            fiatAmount,
-            utrNumber,
-            screenshotUrl,
-            status: 'Pending'
-        });
-
+        const newTransaction = new Transaction({ username, diamondAmount, fiatAmount, utrNumber, screenshotUrl });
         await newTransaction.save();
         
-        // Admin को सूचित करने का लॉजिक यहाँ आएगा (Socket.io या ईमेल)
-
         res.json({ success: true, message: 'Payment request submitted successfully. Diamonds will be credited after verification.' });
 
     } catch (error) {
@@ -145,42 +137,30 @@ app.post('/api/buy-diamonds', async (req, res) => {
 });
 // *************************************************************
 
-// ********** ADMIN APPROVAL API (Manual Logic - NEW) **********
-// Note: This needs an external admin dashboard or a separate secure UI for you (the owner)
+// ********** ADMIN APPROVAL API (Manual Logic) **********
 app.post('/api/admin/approve-payment', async (req, res) => {
-    // AdminId यहाँ सुरक्षा के लिए होना चाहिए, लेकिन अभी के लिए सरलता के लिए छोड़ा गया है
+    // ... (same as previous server.js logic) ...
     const { transactionId, status } = req.body; 
-
-    if (!transactionId || !['Approved', 'Rejected'].includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid approval details or status.' });
-    }
+    
+    if (!transactionId || !['Approved', 'Rejected'].includes(status)) return res.status(400).json({ success: false, message: 'Invalid approval details or status.' });
 
     try {
         const transaction = await Transaction.findById(transactionId);
-
-        if (!transaction || transaction.status !== 'Pending') {
-            return res.status(404).json({ success: false, message: 'Transaction not found or already processed.' });
-        }
+        if (!transaction || transaction.status !== 'Pending') return res.status(404).json({ success: false, message: 'Transaction not found or already processed.' });
 
         transaction.status = status;
-        transaction.approvedBy = 'OwnerID'; // Replace with actual Admin/Owner ID later
+        transaction.approvedBy = 'OwnerID'; 
         await transaction.save();
 
         if (status === 'Approved') {
             const user = await User.findOne({ username: transaction.username });
-
             if (user) {
                 user.diamonds += transaction.diamondAmount;
                 await user.save();
-                
-                // Front-end को सूचित करें कि डायमंड्स क्रेडिट हो गए हैं
-                //io.to(user.socketId).emit('diamonds_credited', { amount: transaction.diamondAmount, newBalance: user.diamonds });
-                
                 res.json({ success: true, message: `Payment approved. ${transaction.diamondAmount} Diamonds credited to ${user.username}.` });
                 return;
             }
         }
-
         res.json({ success: true, message: `Payment ${status.toLowerCase()} successful.` });
 
     } catch (error) {
@@ -190,6 +170,73 @@ app.post('/api/admin/approve-payment', async (req, res) => {
 });
 // *************************************************************
 
+// ********** GET GIFTS API (For Frontend Store) **********
+app.get('/api/gifts', async (req, res) => {
+    try {
+        const gifts = await Gift.find({});
+        res.json({ success: true, gifts });
+    } catch (error) {
+        console.error('Get Gifts Error:', error);
+        res.status(500).json({ success: false, message: 'Could not fetch gifts.' });
+    }
+});
+// *********************************************************
+
+// ********** VIP ROOM CREATION API (NEW) **********
+app.post('/api/room/create', async (req, res) => {
+    const { username, roomName, isVIP } = req.body;
+    const VIP_COST_DIAMONDS = 200; // Rs 200 is equivalent to 500 Diamonds from our package, using 200D for simplicity
+
+    try {
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+        // Check if user already owns a room
+        const existingRoom = await Room.findOne({ ownerUsername: username });
+        if (existingRoom) {
+            return res.status(400).json({ success: false, message: `You already own room: ${existingRoom.name}.` });
+        }
+        
+        let newRoomData = {
+            name: roomName,
+            ownerUsername: username,
+            roomId: Date.now().toString().slice(-5), // Simple unique ID
+            isVIP: false
+        };
+
+        if (isVIP) {
+            if (user.diamonds < VIP_COST_DIAMONDS) {
+                return res.status(400).json({ success: false, message: `Insufficient diamonds. Requires ${VIP_COST_DIAMONDS} diamonds for VIP room.` });
+            }
+            
+            // Deduct diamonds for VIP room
+            user.diamonds -= VIP_COST_DIAMONDS;
+            await user.save();
+            
+            // Set VIP status (e.g., for 30 days)
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30); 
+            
+            newRoomData.isVIP = true;
+            newRoomData.vipExpiry = expiryDate;
+        }
+
+        const newRoom = new Room(newRoomData);
+        await newRoom.save();
+
+        res.json({ 
+            success: true, 
+            message: `Room "${newRoom.name}" created successfully. ${isVIP ? 'VIP status applied.' : ''}`, 
+            room: newRoom,
+            newDiamondBalance: user.diamonds // Send updated balance
+        });
+
+    } catch (error) {
+        console.error('Room Creation Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during room creation.' });
+    }
+});
+// *************************************************
 
 // --- HOMEPAGE ROUTE (index.html) ---
 app.get('/', (req, res) => {
@@ -201,7 +248,7 @@ app.get('/', (req, res) => {
 const userRoomMap = {};
 // ************************************************************************
 
-// --- Socket.io Logic ---
+// --- Socket.io Logic (UPDATED for Super Gifts) ---
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     
@@ -209,8 +256,6 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         userRoomMap[socket.id] = { roomId, userId };
         
-        console.log(`${userId} joined room ${roomId}`);
-
         const currentRoom = io.sockets.adapter.rooms.get(roomId);
         const count = currentRoom ? currentRoom.size : 1;
         io.to(roomId).emit('user_joined', { userId, count });
@@ -221,22 +266,26 @@ io.on('connection', (socket) => {
         }
     });
 
-    // WebRTC Signaling: OFFER, ANSWER, ICE CANDIDATE
-    socket.on('webrtc_offer', (data) => {
-        io.to(data.target).emit('webrtc_offer', { sender: socket.id, offer: data.offer });
-    });
-    socket.on('webrtc_answer', (data) => {
-        io.to(data.target).emit('webrtc_answer', { sender: socket.id, answer: data.answer });
-    });
-    socket.on('webrtc_ice_candidate', (data) => {
-        io.to(data.target).emit('webrtc_ice_candidate', { sender: socket.id, candidate: data.candidate });
-    });
-    
-    // Gift sending notification
+    // Gift sending notification (Super Gift announcement added)
     socket.on('send_gift_realtime', (data) => {
         io.to(data.roomId).emit('gift_received_animation', data);
+        
+        // --- SUPER GIFT ANNOUNCEMENT (NEW) ---
+        if (data.isSuperGift) {
+            // Send global announcement for gifts > 50,000 diamonds
+            io.emit('global_announcement', {
+                message: `${data.sender} sent a **${data.giftName} (${data.amount} Diamonds)** to ${data.receiver} in Room ${data.roomId}! 🚀`,
+                type: 'SuperGift'
+            });
+        }
+        // --------------------------------------
     });
 
+    // WebRTC Signaling: OFFER, ANSWER, ICE CANDIDATE
+    socket.on('webrtc_offer', (data) => { io.to(data.target).emit('webrtc_offer', { sender: socket.id, offer: data.offer }); });
+    socket.on('webrtc_answer', (data) => { io.to(data.target).emit('webrtc_answer', { sender: socket.id, answer: data.answer }); });
+    socket.on('webrtc_ice_candidate', (data) => { io.to(data.target).emit('webrtc_ice_candidate', { sender: socket.id, candidate: data.candidate }); });
+    
     // Disconnect handling
     socket.on('disconnect', () => {
         const roomInfo = userRoomMap[socket.id];
@@ -251,3 +300,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
+          
