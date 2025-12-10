@@ -40,6 +40,25 @@
             justify-content: center; 
             align-items: center;
         }
+        /* Style for the Profile Edit Modal (Basic) */
+        .edit-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+        .edit-modal input, .edit-modal button {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -51,11 +70,20 @@
         <input type="text" id="username-input" placeholder="Enter Your Username">
         <button onclick="handleLogin()">Login / Register</button>
     </div>
+    
+    <div class="edit-modal" id="edit-modal">
+        <h3>Edit Profile/Room</h3>
+        <input type="text" id="edit-username" placeholder="New Username (optional)">
+        <input type="text" id="edit-roomname" placeholder="New Room Name">
+        <input type="text" id="edit-profilepic" placeholder="New Profile Pic URL (optional)">
+        <button onclick="handleProfileEdit()">Save Changes</button>
+        <button onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+    </div>
 
     <div id="app-ui">
         <div class="app-container">
             <header class="room-header">
-                <h3>❤️ Love Café (Room #101)</h3>
+                <h3>❤️ <span id="current-room-name">Loading...</span></h3>
                 <span class="live-badge">LIVE 🔴</span>
             </header>
 
@@ -68,21 +96,47 @@
                     </div>
                     
                     <div class="avatar-container active-frame"> 
-                        <img src="https://i.pravatar.cc/150?img=1" alt="Host" class="avatar">
+                        <img src="https://i.pravatar.cc/150?img=1" alt="Host" class="avatar" id="host-avatar">
                     </div>
                     
                     <div class="mic-icon active">🎤</div>
-                    <span class="username">Host Annie 👑</span>
+                    <span class="username" id="host-username">Host Annie 👑</span>
                 </div>
                 </div>
 
             <div class="seats-grid" id="seats-grid">
-                <div class="seat empty-seat"><span>+</span></div> 
+                <div class="seat cohost-seat" id="seat-2">
+                    <div class="level-info">
+                        <span class="level-badge">LV 5</span> 
+                        <div class="xp-bar-container"><div class="xp-bar" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="avatar-container"> 
+                        <img src="https://i.pravatar.cc/150?img=2" alt="Co-Host 1" class="avatar">
+                    </div>
+                    <div class="mic-icon">🎤</div>
+                    <span class="username">Demo 1</span>
+                </div>
+
+                <div class="seat empty-seat" id="seat-3"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-4"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-5"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-6"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-7"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-8"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-9"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-10"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-11"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-12"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-13"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-14"><span>+</span></div> 
+                <div class="seat empty-seat" id="seat-15"><span>+</span></div> 
+                
             </div>
 
             <div class="footer-controls">
                 <button class="btn" onclick="sendChatMessage()">💬 Chat</button>
                 <button class="btn gift-btn" onclick="simulateGift(500)">🎁 Gift (500)</button>
+                <button class="btn" onclick="showEditModal()">⚙️ Edit Profile</button>
                 <button class="btn">🚪 Leave</button>
             </div>
 
@@ -101,36 +155,56 @@
         const usernameInput = document.getElementById('username-input');
         const userInfoDisplay = document.getElementById('user-info');
         const appUi = document.getElementById('app-ui');
+        const editModal = document.getElementById('edit-modal');
         
+        // --- Utility Functions ---
+        function getStoredUser() {
+            const username = localStorage.getItem('username');
+            const diamonds = localStorage.getItem('diamonds') || 500;
+            const profilePic = localStorage.getItem('profilePic') || 'https://i.pravatar.cc/150?img=1';
+            const roomName = localStorage.getItem('roomName') || 'My Couple Chat Room';
+            return { username, diamonds, profilePic, roomName };
+        }
+
+        function updateHostUI(user) {
+            document.getElementById('host-username').textContent = user.username + ' 👑';
+            document.getElementById('host-avatar').src = user.profilePic;
+            document.getElementById('current-room-name').textContent = user.roomName;
+            userInfoDisplay.textContent = `User: ${user.username} | Diamonds: ${user.diamonds}`;
+        }
+
         // --- Login/Authentication Logic ---
         function showAppUI(user) {
             loginModal.style.display = 'none';
-            appUi.style.display = 'flex'; // UI को Flexbox के साथ दिखाएँ
-            userInfoDisplay.textContent = `User: ${user.username} | Diamonds: ${user.diamonds}`;
+            appUi.style.display = 'flex'; 
+            
+            updateHostUI(user);
             
             // Socket.io कनेक्शन लॉजिक
             const socket = io(); 
+            window.socket = socket; // Global access for socketClient.js & ui.js
+            
             socket.on('connect', () => {
                 const roomId = '101'; 
                 console.log('Attempting to join room 101 with ID:', user.username);
                 socket.emit('join_room', { roomId, userId: user.username }); 
             });
             
-            // ********** वॉयस चैट शुरू करें **********
+            // Set up UI listeners
+            if (typeof window.setupSocketListeners === 'function') {
+                window.setupSocketListeners(socket); 
+            }
+            
+            // Start Voice Chat
             if (typeof window.initVoiceChat === 'function') {
                 window.initVoiceChat(); 
             }
-            // ****************************************
         }
 
-        // चेक करें कि यूज़र पहले से लॉगिन है या नहीं
-        const storedUsername = localStorage.getItem('username');
-        if (storedUsername) {
-            // यदि पिछले सेशन का डेटा है, तो सीधे App UI दिखाएँ
-            showAppUI({ 
-                username: storedUsername, 
-                diamonds: localStorage.getItem('diamonds') || 1000 // default 1000 if not found
-            });
+        // Check for stored user on load
+        const storedUser = getStoredUser();
+        if (storedUser.username) {
+            showAppUI(storedUser);
         }
 
         async function handleLogin() {
@@ -152,11 +226,12 @@
                 if (data.success) {
                     alert(data.message);
                     
-                    // यूज़र डेटा localStorage में सेव करें
+                    // Save user data (including new fields)
                     localStorage.setItem('username', data.user.username);
                     localStorage.setItem('diamonds', data.user.diamonds);
-                    
-                    // UI अपडेट करें (Chat Room UI दिखाएँ)
+                    localStorage.setItem('profilePic', data.user.profilePic);
+                    localStorage.setItem('roomName', data.user.roomName);
+
                     showAppUI(data.user);
                 } else {
                     alert('Login/Registration Failed: ' + data.message);
@@ -167,7 +242,57 @@
             }
         }
         
-        // --- Gift/Chat Logic (Gifting API Test) ---
+        // --- Profile Edit Logic ---
+        window.showEditModal = function() {
+            const user = getStoredUser();
+            document.getElementById('edit-username').value = user.username;
+            document.getElementById('edit-roomname').value = user.roomName;
+            document.getElementById('edit-profilepic').value = user.profilePic;
+            editModal.style.display = 'block';
+        }
+
+        window.handleProfileEdit = async function() {
+            const oldUsername = localStorage.getItem('username');
+            const newUsername = document.getElementById('edit-username').value.trim();
+            const newRoomName = document.getElementById('edit-roomname').value.trim();
+            const newProfilePicUrl = document.getElementById('edit-profilepic').value.trim();
+
+            try {
+                const response = await fetch('/api/profile/edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: oldUsername, 
+                        newUsername, 
+                        newRoomName, 
+                        newProfilePicUrl 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    editModal.style.display = 'none';
+
+                    // Update localStorage with new data
+                    localStorage.setItem('username', data.user.username);
+                    localStorage.setItem('diamonds', data.user.diamonds);
+                    localStorage.setItem('profilePic', data.user.profilePic);
+                    localStorage.setItem('roomName', data.user.roomName);
+                    
+                    // Refresh UI
+                    updateHostUI(data.user);
+                } else {
+                    alert('Profile Update Failed: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Network Error:', error);
+                alert('An error occurred during profile update.');
+            }
+        }
+        
+        // --- Gift/Chat Logic ---
         window.simulateGift = function(amount) {
             const currentUsername = localStorage.getItem('username');
             if (!currentUsername) {
@@ -179,11 +304,11 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-User-ID': currentUsername // सर्वर को यूज़र ID भेज रहा है
+                    'X-User-ID': currentUsername 
                 },
                 body: JSON.stringify({
                     senderId: currentUsername,
-                    receiverId: 'HostAnnie', // होस्ट को रिसीवर मान लिया गया है
+                    receiverId: 'HostAnnie', // For demo, HostAnnie is the fixed receiver
                     amount: amount
                 })
             })
@@ -191,7 +316,19 @@
             .then(data => {
                 if (data.success) {
                     alert('Gifting Successful! New Diamond Balance: ' + data.newBalance);
-                    // यहां Socket.io से एनिमेशन भेजने का कोड आएगा
+                    localStorage.setItem('diamonds', data.newBalance);
+                    updateHostUI(getStoredUser()); 
+                    
+                    // Emit real-time gift signal
+                    if (window.socket) {
+                         window.socket.emit('send_gift_realtime', {
+                            sender: currentUsername,
+                            receiver: 'HostAnnie',
+                            amount: amount,
+                            roomId: '101',
+                            leveledUp: data.leveledUp || false
+                        });
+                    }
                 } else {
                     alert('Gifting Failed: ' + (data.message || 'Check server logs.'));
                 }
@@ -200,10 +337,10 @@
         };
         
         window.sendChatMessage = function() {
-            // ... चैट लॉजिक ...
+            alert('Chat functionality not yet implemented, but the button works!');
         };
 
     </script>
 </body>
-                                                 </html>
-                                              
+                </html>
+                    
