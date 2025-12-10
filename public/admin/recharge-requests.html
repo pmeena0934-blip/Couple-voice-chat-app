@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Recharges | Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .request-card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ffc107; }
+        .screenshot-link { color: #ff69b4; margin-top: 5px; display: block; }
+        .accept-btn { background-color: #4caf50; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .reject-btn { background-color: #f44336; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Pending Diamond Recharge Requests</h1>
+    <p id="message">Loading requests...</p>
+    <div id="requestsContainer">
+        </div>
+
+<script>
+    const adminUsername = 'AppOwner'; // Set your admin identifier
+    
+    async function fetchRequests() {
+        // ... (Logic to fetch requests from /api/admin/recharge/requests?status=pending)
+        // This is the same logic as provided in the previous detailed response.
+        // For simplicity, we assume the server route is already implemented.
+        try {
+            const response = await fetch('/api/admin/recharge/requests?status=pending');
+            const data = await response.json();
+            // ... (Render logic remains same)
+            
+        } catch (error) {
+            // Handle error
+        }
+    }
+    
+    async function handleAction(requestId, action) {
+        if (!confirm(`Are you sure you want to ${action} this request? This action is irreversible.`)) return;
+
+        try {
+            const response = await fetch('/api/admin/recharge/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    requestId, 
+                    action, 
+                    adminUsername: adminUsername 
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`Action success: ${data.message}`);
+                fetchRequests(); // Reload list
+            } else {
+                alert(`Action Failed: ${data.message}`);
+            }
+        } catch (error) {
+            alert('Network error during action.');
+        }
+    }
+
+    // Function to render requests goes here...
+    // fetchRequests(); // Uncomment this to start fetching
+</script>
+</body>
+</html>
