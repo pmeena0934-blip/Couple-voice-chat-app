@@ -286,7 +286,9 @@
                             <span>${userCount}</span>
                         </div>
                     `;
+                    // ***** FIX: Join Logic now redirects to room.html *****
                     roomCard.onclick = () => joinRoom(room.roomId); 
+                    // *******************************************************
                     roomListDiv.appendChild(roomCard);
                 });
 
@@ -344,13 +346,16 @@
         }
     }
     
+    // ***** FIX: Updated Join Room Function *****
     function joinRoom(roomId) {
-        alert(`Joining Room ID: ${roomId}. (Next step is building the Live Voice Chat UI!)`);
+        // Navigate to the new live room page, passing the room ID in the URL
+        window.location.href = `/room.html?id=${roomId}`;
     }
+    // *******************************************
 
     fetchRooms(); // Call the function when the page loads
 </script>
 
 </body>
     </html>
-        
+    
