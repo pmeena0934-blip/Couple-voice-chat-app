@@ -55,32 +55,26 @@
             if (response.ok) {
                 // Success: Login or Registration was successful
                 messageDiv.className = 'success';
-                messageDiv.innerHTML = `${data.message} User: <strong>${data.user.username}</strong> | Diamonds: ${data.user.diamonds}<br>Redirecting...`;
+                messageDiv.innerHTML = `${data.message} User: <strong>${data.user.username}</strong> | Diamonds: ${data.user.diamonds}<br>Redirecting to Rooms...`;
 
-                // **********************************************
-                // *** नया लॉजिक: लोकल स्टोरेज में डेटा सेव करना और रीडायरेक्ट करना ***
-                // **********************************************
-                
-                // 1. यूजर डेटा को लोकल स्टोरेज में सेव करें
+                // 1. Save user data
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
                 
-                // 2. 2 सेकंड बाद Rooms List पेज पर रीडायरेक्ट करें
+                // 2. Redirect to Rooms List page after 2 seconds
                 setTimeout(() => {
-                    // अब हम rooms.html पर रीडायरेक्ट करेंगे
                     window.location.href = '/rooms.html'; 
                 }, 2000);
-                // **********************************************
 
             } else {
-                // Server returned an error (e.g., 500, 400, 503)
+                // Server returned an error
                 messageDiv.className = 'error';
                 messageDiv.innerHTML = `Login Failed (Status: ${response.status}): <strong>${data.message || 'Unknown server error.'}</strong>`;
             }
 
         } catch (error) {
-            // Network or Connection error (Server Down/Unreachable)
+            // Network or Connection error
             messageDiv.className = 'error';
-            messageDiv.innerHTML = `<strong>NETWORK ERROR:</strong> Could not connect to the server. Check if the server (Render) is running. <br> Full Error: ${error.message}`;
+            messageDiv.innerHTML = `<strong>NETWORK ERROR:</strong> Could not connect to the server. Check server logs. <br> Full Error: ${error.message}`;
         }
     }
 </script>
