@@ -7,10 +7,10 @@
     <style>
         body { 
             font-family: Arial, sans-serif; 
-            background: linear-gradient(180deg, #1f083d 0%, #3e1b6d 100%); /* Dark, moody background like the screenshot */
+            background: linear-gradient(180deg, #1f083d 0%, #3e1b6d 100%); 
             color: white; 
             margin: 0; 
-            padding-bottom: 50px; /* Space for input/controls */
+            padding-bottom: 50px; 
         }
         
         /* --- Top Bar --- */
@@ -22,8 +22,8 @@
             background: rgba(0, 0, 0, 0.3);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
         }
-        .room-details h2 { font-size: 1.2em; margin: 0; }
-        .room-details p { font-size: 0.8em; color: #bbb; margin: 0; }
+        .room-details h2 { margin: 0; font-size: 1.2em; }
+        .room-details p { margin: 0; font-size: 0.8em; color: #bbb; }
         .back-btn, .settings-btn { 
             color: white; 
             font-size: 1.5em; 
@@ -31,22 +31,50 @@
             padding: 5px; 
         }
 
-        /* --- Mic Slots / User Grid --- */
-        .mic-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 columns like the screenshot */
-            gap: 10px;
+        /* --- Mic Slots Container --- */
+        .mic-container {
             padding: 15px;
-            max-width: 600px;
+            max-width: 650px; /* Increased max-width for 5 columns */
             margin: 0 auto;
         }
+
+        /* --- Special (Owner/Admin) Slots (2 Slots) --- */
+        .special-mics {
+            display: flex;
+            justify-content: center; /* Center the two main slots */
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .mic-slot.special {
+            width: 120px; /* Slightly larger */
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid #ff69b4; /* Pink border for Owner/Admin */
+            box-shadow: 0 0 10px #ff69b4;
+        }
+        .mic-slot.special .user-avatar { 
+            width: 80px; 
+            height: 80px;
+            border: 4px solid #fff;
+        }
+        .mic-slot.special .user-name { font-size: 1em; font-weight: bold; }
+
+
+        /* --- General Slots (13 Slots) --- */
+        .general-mics {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columns for the 13 slots (5+5+3) */
+            gap: 10px;
+        }
+        
+        /* --- Generic Mic Slot Style --- */
         .mic-slot {
             position: relative;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             text-align: center;
             padding: 10px 5px;
-            height: 100px;
+            height: 80px; /* Slightly reduced height to fit more slots */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -55,7 +83,8 @@
             border: 2px solid transparent;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
         }
-        .mic-slot.occupied { border-color: #ffc107; }
+        .mic-slot.occupied { border-color: #ffc107; } /* Active user glow */
+
         .mic-number { 
             position: absolute; 
             top: 5px; 
@@ -66,15 +95,15 @@
             padding: 2px 5px; 
         }
         .user-avatar { 
-            width: 50px; 
-            height: 50px; 
+            width: 40px; /* Reduced size for 5 columns */
+            height: 40px; 
             border-radius: 50%; 
             background: #999; 
             margin-bottom: 5px;
             object-fit: cover;
             border: 2px solid #fff; 
         }
-        .user-name { font-size: 0.8em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .user-name { font-size: 0.7em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
         
         /* --- Chat/Gift Section --- */
         .chat-container {
@@ -82,16 +111,17 @@
             bottom: 50px;
             left: 0;
             right: 0;
-            height: 200px; /* Chat area height */
+            height: 180px; /* Reduced height to provide space */
             background: rgba(0, 0, 0, 0.4);
             padding: 10px;
             overflow-y: scroll;
             display: flex;
-            flex-direction: column-reverse; /* New messages at bottom */
+            flex-direction: column-reverse;
             font-size: 0.9em;
         }
         .chat-message { margin-bottom: 5px; word-wrap: break-word; }
         .chat-message strong { color: #ffc107; }
+        .chat-message.system { color: #87ceeb; }
         .chat-message.gift { color: #ff69b4; font-weight: bold; }
 
         /* --- Bottom Controls --- */
@@ -136,8 +166,13 @@
     <a href="#" class="settings-btn">⚙️</a>
 </div>
 
-<div class="mic-grid" id="micGrid">
-    </div>
+<div class="mic-container">
+    <div class="special-mics" id="specialMics">
+        </div>
+
+    <div class="general-mics" id="generalMics">
+        </div>
+</div>
 
 <div class="chat-container" id="chatContainer">
     </div>
@@ -153,7 +188,8 @@
 <script>
     const socket = io();
     const chatContainer = document.getElementById('chatContainer');
-    const micGrid = document.getElementById('micGrid');
+    const specialMicsDiv = document.getElementById('specialMics');
+    const generalMicsDiv = document.getElementById('generalMics');
     
     // --- 1. Load Room and User Info ---
     const urlParams = new URLSearchParams(window.location.search);
@@ -165,31 +201,52 @@
         window.location.href = '/rooms.html';
     }
 
-    document.getElementById('roomName').textContent = `Room ID: ${roomId}`; 
-
-    // --- 2. Mic Slot Generation ---
-    for (let i = 1; i <= 10; i++) {
+    // --- 2. Mic Slot Generation (2 Special + 13 General = 15 Total) ---
+    function createMicSlot(i, isSpecial) {
         const slot = document.createElement('div');
         slot.className = 'mic-slot';
+        if (isSpecial) {
+            slot.className += ' special';
+        }
         slot.id = `mic-${i}`;
+        
+        let defaultName = 'Empty';
+        if (i === 1) defaultName = 'Owner';
+        if (i === 2) defaultName = 'Admin';
+
         slot.innerHTML = `
             <span class="mic-number">Mic ${i}</span>
             <img class="user-avatar" src="https://i.pravatar.cc/150?img=0" alt="Empty Slot">
-            <p class="user-name">Empty</p>
+            <p class="user-name">${defaultName}</p>
         `;
-        slot.onclick = () => joinMicSlot(i);
-        micGrid.appendChild(slot);
+        slot.onclick = () => joinMicSlot(i, isSpecial);
+        return slot;
+    }
+
+    // Generate Special Slots (1 & 2)
+    specialMicsDiv.appendChild(createMicSlot(1, true));
+    specialMicsDiv.appendChild(createMicSlot(2, true));
+
+    // Generate General Slots (3 to 15)
+    for (let i = 3; i <= 15; i++) {
+        generalMicsDiv.appendChild(createMicSlot(i, false));
     }
 
     // --- 3. Socket.IO Logic ---
 
+    // Send Join Request to Server
     socket.emit('joinRoom', { roomId, username: currentUser.username });
 
+    // Handle initial room details and owner/admin display
     socket.on('roomInfo', (data) => {
-        // Update room details (Owner, VIP status, etc.)
         document.getElementById('roomName').textContent = data.name;
         document.getElementById('roomIdDisplay').textContent = `ID: ${data.roomId} | Owner: ${data.ownerUsername}`;
-        // Load initial mic states if needed
+        
+        // Auto-assign owner to Mic 1 (This logic should be finalized on the server)
+        if (data.ownerUsername === currentUser.username) {
+            // If the user is the owner, automatically request Mic 1
+            joinMicSlot(1, true); 
+        }
     });
 
     socket.on('message', (message) => {
@@ -198,34 +255,50 @@
         
         if (message.type === 'gift') {
              msgElement.className += ' gift';
-             msgElement.innerHTML = `🎁 <strong>${message.username}</strong> sent a ${message.giftName} to the room!`;
+             msgElement.innerHTML = `🎁 <strong>${message.username}</strong> sent a gift to the room!`;
+        } else if (message.type === 'system') {
+             msgElement.className += ' system';
+             msgElement.innerHTML = `${message.text}`;
         } else {
              msgElement.innerHTML = `<strong>${message.username}:</strong> ${message.text}`;
         }
         
-        chatContainer.prepend(msgElement); // Add to the top (due to flex-direction: column-reverse)
+        chatContainer.prepend(msgElement); 
     });
-
+    
+    // Handle Mic Updates
     socket.on('micUpdate', (micState) => {
-        // Example micState: { slot: 3, user: 'Priya', avatar: 'url' }
         const slotElement = document.getElementById(`mic-${micState.slot}`);
+        if (!slotElement) return;
+
         if (micState.user) {
             slotElement.classList.add('occupied');
             slotElement.querySelector('.user-name').textContent = micState.user;
-            slotElement.querySelector('.user-avatar').src = micState.avatar;
+            slotElement.querySelector('.user-avatar').src = micState.avatar || 'https://i.pravatar.cc/150?img=10';
         } else {
+            const isSpecial = micState.slot <= 2;
             slotElement.classList.remove('occupied');
-            slotElement.querySelector('.user-name').textContent = 'Empty';
+            slotElement.querySelector('.user-name').textContent = isSpecial ? (micState.slot === 1 ? 'Owner' : 'Admin') : 'Empty';
             slotElement.querySelector('.user-avatar').src = 'https://i.pravatar.cc/150?img=0';
         }
     });
 
     // --- 4. User Interaction Functions ---
 
-    function joinMicSlot(slotNumber) {
-        // Simple logic for joining the mic
+    function joinMicSlot(slotNumber, isSpecial) {
+        const ownerUsername = document.getElementById('roomIdDisplay').textContent.split(' | Owner: ')[1];
+        
+        if (isSpecial && slotNumber === 1 && currentUser.username !== ownerUsername) {
+            alert('Mic 1 is reserved for the Room Owner.');
+            return;
+        }
+        if (slotNumber === 2 && currentUser.username !== ownerUsername) {
+            alert('Mic 2 is reserved for the Admin/Co-Host. Only the room owner or authorized admin can join this mic.');
+            // For general users, we allow the request but the server logic should block it later.
+        }
+
         socket.emit('requestMic', { roomId, slot: slotNumber, username: currentUser.username });
-        alert(`Requesting Mic ${slotNumber}. (Backend must handle acceptance/rejection)`);
+        console.log(`Requesting Mic ${slotNumber}.`);
     }
 
     function sendChatMessage() {
@@ -238,8 +311,7 @@
     }
 
     function sendGift() {
-        // This function needs a full Gift UI modal, but for now:
-        alert('Gift Modal will open here. Sending a sample gift.');
+        alert('Sending Gift (Requires Diamond deduction logic on server)');
         socket.emit('sendGift', { 
             roomId, 
             username: currentUser.username, 
@@ -251,5 +323,4 @@
 </script>
 
 </body>
-  </html>
-      
+</html>
