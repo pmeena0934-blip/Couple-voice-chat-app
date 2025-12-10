@@ -1,5 +1,3 @@
-// --- server.js (Final Complete and Corrected Backend Logic) ---
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -9,362 +7,385 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
-
-// --- Configuration and Middleware ---
-const PORT = process.env.PORT || 10000;
-
-// Set up storage for uploaded files (profile pictures)
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
+// Socket.IO configuration for stability on Render
+const io = socketIo(server, {
+    cors: {
+        origin: "*", // Allow all origins for development/testing
+        methods: ["GET", "POST"]
     }
 });
-const upload = multer({ storage: storage });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// --- Configuration and Setup ---
 
-// Create the uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, 'public/uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
+// Use environment variable PORT provided by Render, or default to 3000
+const PORT = process.env.PORT || 3000; 
+// Use the live URL for client-side connection (important for stability)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
-// --- FAKE DATABASE (In-Memory for demonstration) ---
-const users = {}; // { username: { password, diamonds, coins, ... } }
-const rooms = {}; // { roomId: { name, ownerUsername, micSlots, usersCount } }
-let nextRoomId = 10000;
+// Global data store (in-memory for simplicity, use MongoDB for production)
+let users = {};
+let rooms = {};
+let roomCounter = 10000; 
 
-// --- User Model Structure (Default) ---
+// --- User Model ---
 function createNewUser(username, password) {
     return {
         username: username,
         password: password,
         id: Math.floor(100000000 + Math.random() * 900000000),
-        diamonds: 500, // Starting Diamonds
-        coins: 10,   // Starting Coins
+        diamonds: 500, 
+        coins: 10,   
         level: 1,
         charisma: 0,
         contribution: 0,
         profilePic: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 20),
-        socketId: null
+        socketId: null,
+        following: new Set(), // Users this person follows
+        followers: new Set()  // Users who follow this person
     };
 }
 
-// --- Room Model Structure ---
-function createNewRoom(name, ownerUsername) {
-    const micSlots = {};
-    for (let i = 1; i <= 10; i++) {
-        micSlots[i] = { username: null, avatar: null }; // Empty slot
+// Initialize test user for quick testing
+if (!users['Meena9090']) {
+    users['Meena9090'] = createNewUser('Meena9090', 'test1234');
+    users['cjgjj'] = createNewUser('cjgjj', 'test1234');
+    // Set a different test user profile for follow testing
+    users['testuser'] = createNewUser('testuser', 'test1234'); 
+}
+
+
+// --- Middleware ---
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+// --- File Upload Configuration (Multer) ---
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        // Ensure the directory is correct for Render deployment
+        cb(null, 'public/uploads/'); 
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
     }
-    // Owner is always on Mic 1
-    const owner = users[ownerUsername];
-    micSlots[1] = { 
-        username: owner.username, 
-        avatar: owner.profilePic 
-    };
+});
+const upload = multer({ storage: storage });
 
-    return {
-        id: nextRoomId++,
-        name: name,
-        ownerUsername: ownerUsername,
-        roomLevel: 1,
-        micSlots: micSlots,
-        usersCount: 0,
-        currentUsers: {} // { socketId: username }
-    };
+// Create the uploads directory if it doesn't exist (Important for Render)
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('Created public/uploads directory.');
 }
 
-// --- API Routes (Login, Register, Rooms) ---
+
+// --- API Routes ---
 
 // 1. Root/Home Route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 2. Registration
-app.post('/api/auth/register', (req, res) => {
+// 2. Login / Register
+app.post('/api/user/login', (req, res) => {
     const { username, password } = req.body;
-    if (users[username]) {
-        return res.json({ success: false, message: 'Username already taken.' });
+    let user = users[username];
+
+    if (!user) {
+        // Register New User
+        user = createNewUser(username, password);
+        users[username] = user;
+        console.log(`New user registered: ${username}`);
+    } else if (user.password !== password) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
     }
-    const newUser = createNewUser(username, password);
-    users[username] = newUser;
-    console.log(`New user registered: ${username}`);
-    res.json({ success: true, message: 'Registration successful. Please log in.', user: newUser });
+    
+    // Convert Set to Array for safe JSON transfer
+    const userData = { 
+        ...user, 
+        following: Array.from(user.following || []),
+        followers: Array.from(user.followers || [])
+    };
+
+    res.json({ 
+        success: true, 
+        message: 'Login successful.',
+        user: userData
+    });
 });
 
-// 3. Login
-app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
+// 3. Get User Data (e.g., when loading profile page)
+app.get('/api/user/:username', (req, res) => {
+    const { username } = req.params;
     const user = users[username];
-    if (!user || user.password !== password) {
-        return res.json({ success: false, message: 'Invalid username or password.' });
+    
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found.' });
     }
-    res.json({ success: true, message: 'Login successful.', user: user });
+
+    // Convert Set to Array for safe JSON transfer
+    const userData = { 
+        ...user, 
+        following: Array.from(user.following || []),
+        followers: Array.from(user.followers || [])
+    };
+
+    res.json({ success: true, user: userData });
 });
 
-// 4. Create Room
-app.post('/api/rooms/create', (req, res) => {
-    const { roomName, ownerUsername } = req.body;
-    if (!users[ownerUsername]) {
-        return res.json({ success: false, message: 'Owner not found.' });
-    }
-    const newRoom = createNewRoom(roomName, ownerUsername);
-    rooms[newRoom.id] = newRoom;
-    console.log(`Room created: ${newRoom.name} (ID: ${newRoom.id})`);
-    res.json({ success: true, message: 'Room created successfully.', room: newRoom });
-});
 
-// 5. Get All Rooms
-app.get('/api/rooms', (req, res) => {
-    const roomList = Object.values(rooms).map(room => ({
-        id: room.id,
-        name: room.name,
-        ownerUsername: room.ownerUsername,
-        usersCount: room.usersCount,
-        roomLevel: room.roomLevel
-    }));
-    res.json({ success: true, rooms: roomList });
-});
-
-// 6. Coin to Diamond Exchange
-app.post('/api/exchange/coin-to-diamond', (req, res) => {
+// 4. Update Profile Picture
+app.post('/api/user/profile/update/pic', upload.single('profilePic'), (req, res) => {
     const { username } = req.body;
     const user = users[username];
 
     if (!user) {
-        return res.json({ success: false, message: 'User not found.' });
-    }
-
-    const exchangeRate = 10; // 10 Coins = 1 Diamond
-    const coinsToExchange = 100; // Example: Minimum exchange amount
-    
-    if (user.coins < coinsToExchange) {
-        return res.json({ success: false, message: `Need at least ${coinsToExchange} Coins for exchange.` });
+        return res.status(404).json({ success: false, message: 'User not found.' });
     }
     
-    const diamondsGained = Math.floor(user.coins / exchangeRate);
-    const coinsDeducted = diamondsGained * exchangeRate;
-
-    user.coins -= coinsDeducted;
-    user.diamonds += diamondsGained;
-
-    console.log(`${username} exchanged ${coinsDeducted} Coins for ${diamondsGained} Diamonds.`);
-    
-    res.json({ 
-        success: true, 
-        message: `${diamondsGained} Diamonds added to your balance!`,
-        newDiamondBalance: user.diamonds,
-        newCoinBalance: user.coins
-    });
+    if (req.file) {
+        // Update user's profile pic URL
+        // Use the relative path for the client
+        user.profilePic = `/uploads/${req.file.filename}`; 
+        
+        res.json({ 
+            success: true, 
+            message: 'Profile picture updated successfully.',
+            newPicUrl: user.profilePic
+        });
+    } else {
+        res.status(400).json({ success: false, message: 'No file uploaded.' });
+    }
 });
 
-// 7. Profile Update (Handling file upload for profile pic)
-app.post('/api/user/profile/update', upload.single('profilePic'), (req, res) => {
-    const { currentUsername, newUsername } = req.body;
-    const profilePicFile = req.file;
 
-    let user = users[currentUsername];
-    if (!user) {
-        return res.json({ success: false, message: 'User not found.' });
+// 5. Create Room
+app.post('/api/rooms/create', (req, res) => {
+    const { roomName, ownerUsername } = req.body;
+    const owner = users[ownerUsername];
+
+    if (!owner) {
+        return res.json({ success: false, message: 'Owner not found.' });
     }
 
-    // Handle Username change
-    if (newUsername && newUsername !== currentUsername) {
-        if (users[newUsername]) {
-            // If the new username is already taken
-            return res.json({ success: false, message: 'New username is already taken.' });
+    const roomId = ++roomCounter;
+    const newRoom = {
+        id: roomId,
+        name: roomName,
+        owner: ownerUsername,
+        members: [ownerUsername],
+        mics: Array(10).fill(null), // 10 Mic slots
+        isLocked: false,
+        type: 'Public' 
+    };
+
+    rooms[roomId] = newRoom;
+    res.json({ success: true, room: newRoom });
+});
+
+// 6. Get All Rooms
+app.get('/api/rooms', (req, res) => {
+    // Convert rooms object to array of values
+    const roomList = Object.values(rooms);
+    res.json({ success: true, rooms: roomList });
+});
+
+// 7. Get Single Room Data
+app.get('/api/rooms/:roomId', (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    const room = rooms[roomId];
+
+    if (!room) {
+        return res.status(404).json({ success: false, message: 'Room not found.' });
+    }
+
+    res.json({ success: true, room: room });
+});
+
+
+// 8. Follow / Unfollow User API (NEW FEATURE)
+app.post('/api/user/follow', (req, res) => {
+    const { followerUsername, targetUsername, action } = req.body;
+    const follower = users[followerUsername];
+    const target = users[targetUsername];
+
+    if (!follower || !target) {
+        return res.json({ success: false, message: 'User not found.' });
+    }
+    
+    // Helper to get current counts
+    const getCounts = (user) => ({
+        followers: user.followers ? user.followers.size : 0,
+        following: user.following ? user.following.size : 0
+    });
+    
+    // Check Status Only
+    if (action === 'check') {
+        const isFollowing = follower.following.has(targetUsername);
+        return res.json({ success: true, isFollowing: isFollowing, counts: getCounts(target) });
+    }
+
+    // Follow Logic
+    if (action === 'follow') {
+        if (follower.following.has(targetUsername)) {
+            return res.json({ success: true, message: 'Already following.', isFollowing: true, counts: getCounts(target) });
         }
         
-        // Update username in the global user list and delete the old entry
-        user.username = newUsername;
-        users[newUsername] = user;
-        delete users[currentUsername];
-    }
-    
-    // Handle Profile Picture update
-    if (profilePicFile) {
-        // The file is saved in public/uploads. Update the path in user data.
-        user.profilePic = `/uploads/${profilePicFile.filename}`;
-    }
+        follower.following.add(targetUsername);
+        target.followers.add(followerUsername);
 
-    console.log(`Profile updated for: ${user.username}`);
-    res.json({ success: true, message: 'Profile updated.', user: user });
+        return res.json({ success: true, message: `Successfully followed ${targetUsername}.`, isFollowing: true, counts: getCounts(target) });
+
+    } else if (action === 'unfollow') {
+        if (!follower.following.has(targetUsername)) {
+            return res.json({ success: true, message: 'Not following.', isFollowing: false, counts: getCounts(target) });
+        }
+        
+        follower.following.delete(targetUsername);
+        target.followers.delete(followerUsername);
+        
+        return res.json({ success: true, message: `Successfully unfollowed ${targetUsername}.`, isFollowing: false, counts: getCounts(target) });
+    } else {
+        return res.json({ success: false, message: 'Invalid action.' });
+    }
 });
 
 
-// --- Socket.io Logic (Live Chat and Mic Management) ---
+// --- Socket.IO Logic (Voice Chat) ---
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    let currentRoomId = null;
-
-    // --- 1. Join Room ---
+    // Join Room
     socket.on('joinRoom', ({ roomId, username }) => {
-        if (!rooms[roomId] || !users[username]) {
-            return socket.emit('error', 'Room or User not found.');
-        }
-
-        currentRoomId = roomId;
-        const room = rooms[roomId];
-        const user = users[username];
-        
         socket.join(roomId);
-        room.usersCount++;
-        room.currentUsers[socket.id] = username;
-        user.socketId = socket.id;
-
-        console.log(`${username} joined room ${roomId}`);
-        
-        // Send initial room info and mic state to the joining user
-        socket.emit('roomInfo', {
-            name: room.name,
-            roomLevel: room.roomLevel,
-            ownerUsername: room.ownerUsername,
-            ownerProfilePic: users[room.ownerUsername].profilePic
-        });
-        socket.emit('initialMicState', room.micSlots);
-        
-        // Notify everyone in the room
-        io.to(roomId).emit('message', { type: 'system', text: `${username} has joined the room.` });
-    });
-
-    // --- 2. Mic Request ---
-    socket.on('requestMic', ({ roomId, slot, username }) => {
         const room = rooms[roomId];
         const user = users[username];
 
-        if (!room || !user) return;
-        if (room.micSlots[slot].username) {
-            return socket.emit('message', { type: 'system', text: `Mic ${slot} is already occupied.` });
-        }
-        
-        // Occupy the mic slot
-        room.micSlots[slot] = { username: username, avatar: user.profilePic };
-        
-        // Broadcast the update
-        io.to(roomId).emit('micUpdate', { 
-            slot: slot, 
-            user: username, 
-            avatar: user.profilePic 
-        });
-        io.to(roomId).emit('message', { 
-            type: 'system', 
-            text: `${username} has taken Mic ${slot}.` 
-        });
-    });
+        if (room && user) {
+            // Add user to room members if not present
+            if (!room.members.includes(username)) {
+                room.members.push(username);
+            }
+            user.socketId = socket.id;
 
-    // --- 3. Send Chat Message ---
-    socket.on('sendMessage', ({ roomId, username, text }) => {
-        io.to(roomId).emit('message', { type: 'chat', username, text });
-        console.log(`Chat in ${roomId} from ${username}: ${text}`);
-    });
-
-    // --- 4. Send Gift ---
-    socket.on('sendGift', ({ roomId, username, giftName, diamondCost, quantity, targetUsername }) => {
-        const sender = users[username];
-        const room = rooms[roomId];
-
-        if (!sender || !room) return;
-
-        const totalCost = diamondCost * quantity;
-        if (sender.diamonds < totalCost) {
-            return socket.emit('message', { type: 'system', text: 'Insufficient diamonds to send gift.' });
-        }
-        
-        // Deduct diamonds from sender
-        sender.diamonds -= totalCost;
-        
-        // Give 'contribution' to sender (for level up)
-        sender.contribution += totalCost; 
-        
-        // Give 'charisma' to target (or room owner for simplicity)
-        const target = users[targetUsername];
-        if (target) {
-            target.charisma += totalCost;
-        }
-
-        // Check for level up (simplistic example)
-        let newLevel = sender.level;
-        if (sender.contribution >= sender.level * 10000) { // Example logic
-            sender.level++;
-            newLevel = sender.level;
+            // Notify everyone in the room
             io.to(roomId).emit('message', { 
-                type: 'system', 
-                text: `${username} leveled up to Lv. ${sender.level}!` 
+                username: 'System', 
+                text: `${username} has joined the room.`, 
+                type: 'system' 
+            });
+
+            // Send updated room state (mics, members)
+            io.to(roomId).emit('roomStateUpdate', room);
+        }
+    });
+
+    // Send Chat Message
+    socket.on('sendMessage', ({ roomId, username, text }) => {
+        io.to(roomId).emit('message', { username, text, type: 'chat' });
+    });
+
+    // Send Gift
+    socket.on('sendGift', ({ roomId, sender, receiver, giftName, diamondsCost }) => {
+        const room = rooms[roomId];
+        const senderUser = users[sender];
+
+        if (room && senderUser && senderUser.diamonds >= diamondsCost) {
+            senderUser.diamonds -= diamondsCost;
+            
+            // Notify room
+            io.to(roomId).emit('message', { 
+                username: 'System', 
+                text: `${sender} sent a ${giftName} to ${receiver || 'the room'}! (Cost: ${diamondsCost}💎)`, 
+                type: 'gift' 
+            });
+
+            // Update sender's balance (optional: send income to receiver if applicable)
+            socket.emit('updateBalance', { diamonds: senderUser.diamonds, coins: senderUser.coins });
+            
+            // For visual effect: emit a gift notification
+            io.to(roomId).emit('giftNotification', { sender, giftName, diamondsCost });
+            
+        } else if (senderUser.diamonds < diamondsCost) {
+            socket.emit('message', { 
+                username: 'System', 
+                text: `You need ${diamondsCost - senderUser.diamonds} more 💎 to send ${giftName}.`, 
+                type: 'system-error' 
             });
         }
-        
-        // Notify sender of diamond balance update
-        socket.emit('diamondUpdate', { 
-            newBalance: sender.diamonds, 
-            newLevel: newLevel 
-        });
-
-        // Broadcast gift message to everyone in the room
-        io.to(roomId).emit('message', { 
-            type: 'gift', 
-            username: username, 
-            text: `${quantity}x ${giftName} to ${targetUsername}` 
-        });
-        console.log(`${username} sent ${quantity}x ${giftName} in room ${roomId}`);
     });
 
-    // --- 5. Disconnect ---
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        if (currentRoomId && rooms[currentRoomId]) {
-            const room = rooms[currentRoomId];
-            const username = room.currentUsers[socket.id];
-            
-            if (username) {
-                // Remove user from room and update count
-                room.usersCount--;
-                delete room.currentUsers[socket.id];
+    // Mic Control (e.g., Host setting mic)
+    socket.on('setMic', ({ roomId, micIndex, username }) => {
+        const room = rooms[roomId];
+        if (room) {
+            // Basic host control check can be added here
+            if (micIndex >= 1 && micIndex <= 10) {
+                // Ensure user is not already on another mic (simple check)
+                room.mics = room.mics.map((micUser, index) => 
+                    micUser === username ? null : micUser
+                );
                 
-                // Remove user from mic slot if they were on one
-                for (let i = 1; i <= 10; i++) {
-                    if (room.micSlots[i].username === username) {
-                        room.micSlots[i] = { username: null, avatar: null };
-                        io.to(currentRoomId).emit('micUpdate', { 
-                            slot: i, 
-                            user: null, 
-                            avatar: null 
-                        });
-                    }
-                }
+                // Set the user to the new mic slot
+                room.mics[micIndex - 1] = username; 
                 
-                // Notify room members
-                io.to(currentRoomId).emit('message', { 
-                    type: 'system', 
-                    text: `${username} has left the room.` 
-                });
+                io.to(roomId).emit('roomStateUpdate', room);
             }
         }
     });
 
-});
+    // Disconnect
+    socket.on('disconnect', () => {
+        console.log('A user disconnected:', socket.id);
+        
+        // Find user and remove them from any room
+        for (const username in users) {
+            if (users[username].socketId === socket.id) {
+                const disconnectedUsername = username;
+                
+                for (const roomId in rooms) {
+                    const room = rooms[roomId];
+                    if (room.members.includes(disconnectedUsername)) {
+                        // Remove from members
+                        room.members = room.members.filter(m => m !== disconnectedUsername);
+                        
+                        // Remove from mic slots
+                        room.mics = room.mics.map(micUser => 
+                            micUser === disconnectedUsername ? null : micUser
+                        );
+                        
+                        // Notify room
+                        io.to(roomId).emit('message', { 
+                            username: 'System', 
+                            text: `${disconnectedUsername} has left the room.`, 
+                            type: 'system' 
+                        });
+                        io.to(roomId).emit('roomStateUpdate', room);
 
-// --- Initial Dummy Data for Testing ---
-users['testuser'] = createNewUser('testuser', 'password');
-users['testuser'].diamonds = 10000;
-users['Meena9090'] = createNewUser('Meena9090', '12345');
-users['Meena9090'].diamonds = 500;
-rooms[14931] = createNewRoom('Yaro ki duniya', 'Meena9090');
-rooms[14931].id = 14931; // Fix ID for consistency
+                        // If the owner leaves, close the room (simple logic)
+                        if (room.owner === disconnectedUsername) {
+                            delete rooms[roomId];
+                            io.to(roomId).emit('roomClosed', 'Room owner disconnected. The room has been closed.');
+                        }
+                        break; // User found and processed, exit inner loop
+                    }
+                }
+                users[username].socketId = null; // Clear socket ID
+                break; // User found, exit outer loop
+            }
+        }
+    });
+});
 
 
 // --- Start Server ---
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Frontend available on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Live URL: ${RENDER_URL}`);
+    console.log('Application started successfully. Ready for use.');
 });
-// --- End of server.js ---
         
