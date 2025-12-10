@@ -1,15 +1,25 @@
 {
   "name": "couple-voice-chat-app",
   "version": "1.0.0",
-  "description": "Group Voice Chat Platform Backend",
+  "description": "Couple Voice Chat Application Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --experimental-modules server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "voicechat",
+    "socketio",
+    "express",
+    "mongoose"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2",
-    "mongoose": "^8.0.3",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.1",
+    "path": "^0.12.7",
+    "socket.io": "^4.7.5"
   }
 }
