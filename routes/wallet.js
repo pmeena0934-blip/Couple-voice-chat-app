@@ -1,58 +1,54 @@
+// routes/wallet.js
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User'); // User model को लोड करें
+const User = require('../models/User'); 
 
-// ********** /api/wallet/gift रूट **********
+// Gifting Logic: Sender's Diamonds decrease, Receiver's Coins increase
 router.post('/gift', async (req, res) => {
-    // Note: server.js से X-User-ID हेडर आ रहा है, लेकिन हम उसे यहां req.body से भी ले सकते हैं
     const senderUsername = req.body.senderId; 
-    const { receiverId, amount } = req.body; // मान लें receiverId होस्ट है
+    const { receiverId, amount } = req.body; 
 
     if (!senderUsername || !receiverId || !amount || amount <= 0) {
         return res.status(400).json({ success: false, message: 'Invalid gift details.' });
     }
 
     try {
-        // 1. भेजने वाले का बैलेंस चेक करें
         let sender = await User.findOne({ username: senderUsername });
         if (!sender) {
             return res.status(404).json({ success: false, message: 'Sender user not found.' });
         }
         
-        // 2. पर्याप्त डायमंड्स हैं या नहीं
         if (sender.diamonds < amount) {
             return res.status(403).json({ success: false, message: 'Insufficient diamonds.' });
         }
 
-        // 3. लेन-देन (Transaction): डायमंड्स घटाएँ और Coins बढ़ाएँ
+        // --- Transaction ---
         sender.diamonds -= amount;
         
-        // प्राप्तकर्ता (Receiver) के Coins को बढ़ाएँ (यह मानते हुए कि HostAnnie भी एक User है)
+        // Receiver (Host) के Coins बढ़ाएँ
         let receiver = await User.findOne({ username: receiverId });
-
         if (receiver) {
-            receiver.coins += amount; // Coins में जोड़ें
+            receiver.coins += amount; 
             await receiver.save();
         } 
         
-        // 4. भेजने वाले का डेटाबेस अपडेट करें
         await sender.save();
 
-        // Socket.io से सभी को उपहार (Gift) के बारे में बताएं (केवल सूचनात्मक)
+        // Socket.io से सभी को उपहार के बारे में बताएं 
         const io = req.app.get('socketio');
-        // आप यह मान सकते हैं कि यह रूम 101 में है
+        // '101' को उस रूम ID से बदलें जिसमें उपहार भेजा गया है
         io.to('101').emit('gift_received', { 
             sender: senderUsername, 
             receiver: receiverId, 
             amount: amount 
         });
 
-
-        // 5. सफलता का जवाब (Response)
+        // 5. सफलता का जवाब 
         return res.json({ 
             success: true, 
             message: 'Gift sent successfully!', 
-            newBalance: sender.diamonds 
+            newBalance: sender.diamonds,
+            newCoins: receiver ? receiver.coins : 0 
         });
 
     } catch (error) {
@@ -61,4 +57,38 @@ router.post('/gift', async (req, res) => {
     }
 });
 
+// ********** [अगला ज़रूरी API] Coins को Diamonds में बदलना (100 Coins = 10 Diamonds) **********
+router.post('/redeem', async (req, res) => {
+    const { username, coinAmount } = req.body;
+    const diamondEquivalent = Math.floor(coinAmount / 10); // 100 coins = 10 diamonds
+    
+    if (coinAmount < 100) {
+        return res.status(400).json({ success: false, message: 'Minimum 100 coins required for redemption.' });
+    }
+
+    try {
+        let user = await User.findOne({ username });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        if (user.coins < coinAmount) {
+            return res.status(403).json({ success: false, message: 'Insufficient coins.' });
+        }
+
+        user.coins -= coinAmount;
+        user.diamonds += diamondEquivalent;
+        await user.save();
+
+        res.json({ success: true, message: 'Redemption successful!', newDiamonds: user.diamonds });
+
+    } catch (error) {
+        console.error('Redeem API Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during redemption.' });
+    }
+});
+
+
 module.exports = router;
+                
