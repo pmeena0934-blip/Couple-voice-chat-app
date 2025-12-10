@@ -1,4 +1,4 @@
-// server.js (Complete File - UPDATED with PWA & Entry Effect Gift Data)
+// server.js (Complete File - FIX for Mongoose User Model Loading Error)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,7 +6,19 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-// --- Import Models ---
+// --- Import Models (FIX Applied Here) ---
+
+// **महत्वपूर्ण FIX:** Mongoose मॉडल कैशिंग समस्या को हल करने के लिए
+// यदि 'User' मॉडल पहले से लोड हो गया है, तो उसे हटाने का प्रयास करें।
+try {
+    if (mongoose.models.User) {
+        delete mongoose.models.User;
+    }
+} catch (e) {
+    console.warn("Could not delete Mongoose model cache for User during require:", e);
+}
+
+// अब सुरक्षित रूप से Import करें।
 const User = require('./models/User');
 const Transaction = require('./models/Transaction');
 const Gift = require('./models/Gift'); 
@@ -22,7 +34,7 @@ async function setupInitialGifts() {
         { name: 'Teddy Bear', diamondCost: 100, category: 'Medium', imageUrl: 'images/teddy.png' },
         { name: 'Luxury Car', diamondCost: 10000, category: 'Car', imageUrl: 'images/car.png' },
         { name: 'Super Rocket', diamondCost: 50000, category: 'SuperGift', imageUrl: 'images/rocket.png', isSuperGift: true },
-        // 10,00,000 Diamond Gift with CAR entry effect (NEW LOGIC ADDED)
+        // 10,00,000 Diamond Gift with CAR entry effect
         { name: 'Golden Dragon', diamondCost: 1000000, category: 'SuperGift', imageUrl: 'images/dragon.png', isSuperGift: true, entryEffect: 'car' }, 
         { name: 'Entrance Frame', diamondCost: 500, category: 'EntryEffect', imageUrl: 'images/frame.png' }
     ];
@@ -79,6 +91,7 @@ app.post('/api/login', async (req, res) => {
             return res.json({ success: true, message: 'Login successful!', user });
         }
     } catch (error) {
+        // यह एरर अब नहीं आनी चाहिए
         console.error('Login/Registration Error:', error);
         res.status(500).json({ success: false, message: 'Server error during authentication.' });
     }
@@ -243,10 +256,6 @@ app.post('/api/room/create', async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-
-// If using a separate /public folder (as suggested), these are already served by express.static('public')
-// app.get('/manifest.json', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'manifest.json')); });
-// app.get('/sw.js', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'sw.js')); });
 
 // *************************************
 
