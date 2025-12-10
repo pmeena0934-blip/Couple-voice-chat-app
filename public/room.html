@@ -3,41 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="roomTitle">Voice Room - Loading...</title>
+    <title id="roomTitle">VIP Voice Chat Room</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        /* --- General Styling and Theme (Dark/VIP Theme) --- */
         :root {
             --primary-color: #ff69b4; /* Pink */
-            --secondary-color: #00bcd4; /* Cyan/Diamond */
-            --background-color: #f4f7f6;
-            --chat-bg: #fff;
-            --mic-bg: #5c677d; /* Dark Grey for Mic */
-            --sit-bg: #e0e0e0;
+            --secondary-color: #ffd700; /* Gold */
+            --background-dark: #1f083d; /* Dark Purple */
+            --chat-bg: #2d1354; /* Slightly lighter chat area */
+            --mic-bg: rgba(255, 255, 255, 0.05);
+            --text-light: #f0f0f0;
+            --text-accent: #00bcd4;
         }
         body { 
-            font-family: Arial, sans-serif; 
-            background: var(--background-color); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--background-dark); 
+            color: var(--text-light); 
             margin: 0; 
             display: flex; 
             flex-direction: column; 
             height: 100vh;
+            overflow: hidden; /* Hide main body scroll */
+            background-image: url('https://i.ibb.co/C07Bf5L/galaxy-bg.png'); /* Add a subtle background image */
+            background-size: cover;
+            background-position: center;
         }
-
-        /* --- Header and Room Info --- */
+        
+        /* --- Header and Top Bar --- */
         .header {
-            background-color: var(--primary-color);
+            background-color: rgba(0, 0, 0, 0.4);
             color: white;
             padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            z-index: 10;
         }
         .header h1 { margin: 0; font-size: 1.2em; max-width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .room-level-info { 
             background: var(--secondary-color); 
+            color: #1f083d;
             padding: 5px 10px; 
-            border-radius: 5px; 
+            border-radius: 15px; 
             font-weight: bold; 
             font-size: 0.9em;
         }
@@ -45,142 +54,169 @@
         /* --- Main Content Area --- */
         .main-content {
             display: flex;
+            flex-direction: column;
             flex-grow: 1;
+            padding: 10px 15px;
             overflow: hidden;
         }
 
-        /* --- Mic Grid (The 15 Seats) --- */
-        .mic-area {
-            flex: 2; /* Takes up more space */
-            padding: 15px;
-            background-color: var(--mic-bg);
-            display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 columns for mics */
-            gap: 10px;
-            overflow-y: auto;
+        /* --- Center Stage (Owner) --- */
+        .center-stage {
+            text-align: center;
+            margin: 20px auto;
+            position: relative;
+            max-width: 300px;
+        }
+        .owner-profile {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid var(--secondary-color); /* Gold border */
+            box-shadow: 0 0 15px var(--secondary-color);
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* VIP Frame - The most crucial part of the UI */
+        .owner-frame-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            background-image: url('https://i.ibb.co/3sS7L7W/golden-frame.png'); /* Use a fancy frame image */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            animation: pulse 2s infinite alternate; /* Simple animation for VIP effect */
+            z-index: 1;
+        }
+        @keyframes pulse {
+            from { opacity: 0.8; transform: translate(-50%, -50%) scale(0.98); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+        }
+
+        .owner-username {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--secondary-color);
+            text-shadow: 0 0 5px var(--primary-color);
+            margin-top: 10px;
+            display: block;
+            z-index: 2;
+            position: relative;
+        }
+
+        /* --- Small Mic Grid (Below Owner) --- */
+        .mic-grid-small {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
         }
         .mic-slot {
-            height: 100px; /* Fixed height for slots */
-            background: var(--sit-bg);
-            border-radius: 8px;
+            width: 70px;
+            height: 70px;
+            background: var(--mic-bg);
+            border-radius: 50%;
             text-align: center;
-            padding: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s, border-color 0.2s;
             cursor: pointer;
             position: relative;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background 0.2s;
             border: 2px solid transparent;
         }
         .mic-slot.occupied {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--secondary-color);
+            border-color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.15);
         }
         .mic-slot:hover:not(.occupied) {
-            background: #ccc;
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
         }
         .mic-img {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 5px;
-            border: 2px solid #fff;
+            margin-top: 5px;
         }
         .mic-number { 
             position: absolute; 
-            top: 3px; 
-            left: 3px; 
-            background: rgba(0, 0, 0, 0.3);
+            bottom: -15px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: var(--primary-color);
             color: white;
             font-size: 0.7em; 
-            padding: 2px 5px; 
-            border-radius: 3px;
+            padding: 2px 8px; 
+            border-radius: 10px;
+            font-weight: bold;
         }
-        .mic-username { 
-            font-size: 0.8em; 
-            display: block; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
-        }
-        
-        /* Highlight Owner Slot (Mic 1) */
-        #mic-1 { border: 3px solid gold; }
-
 
         /* --- Chat Area --- */
         .chat-area {
-            flex: 1; /* Takes up less space than mic area */
-            background: var(--chat-bg);
+            flex-grow: 1;
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            border-left: 1px solid #ddd;
+            backdrop-filter: blur(3px);
+            max-height: 40vh; /* Limits visible chat height */
         }
         .messages {
             flex-grow: 1;
             padding: 10px;
             overflow-y: auto;
-            max-height: 50vh; /* Limits chat height */
         }
         .message {
             margin-bottom: 5px;
             font-size: 0.9em;
         }
-        .message strong { color: var(--primary-color); }
+        .message strong { color: var(--text-accent); }
         .gift-message { color: var(--secondary-color); font-weight: bold; }
-        .system-message { color: #777; font-style: italic; }
+        .system-message { color: #aaa; font-style: italic; }
 
+        /* --- Footer (Input and Controls) --- */
         .chat-input {
             padding: 10px;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
         }
         .chat-input input[type="text"] {
             flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px 0 0 4px;
+            padding: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border-radius: 20px 0 0 20px;
+            outline: none;
         }
         .chat-input button {
             background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 8px 15px;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-        }
-
-        /* --- Footer (Controls and Gifting) --- */
-        .footer-controls {
-            background: #fff;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-        }
-        .control-btn {
-            background: var(--secondary-color);
-            color: white;
-            border: none;
             padding: 10px 15px;
-            border-radius: 20px;
+            border-radius: 0 20px 20px 0;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.9em;
             transition: background 0.2s;
         }
-        .control-btn:hover { background: #0097a7; }
-        
-        /* Gifting Panel */
+
+        /* --- Gifting Panel --- (Keep the previous gifting logic styles) */
         #giftPanel {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background: white;
-            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+            background: var(--chat-bg);
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.3);
             padding: 15px;
             transform: translateY(100%);
             transition: transform 0.3s ease-out;
@@ -189,46 +225,21 @@
         #giftPanel.visible {
             transform: translateY(0);
         }
-        .gift-grid {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-        }
+        .gift-grid { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
         .gift-item {
-            flex-shrink: 0;
-            text-align: center;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: border-color 0.2s;
+            flex-shrink: 0; text-align: center; cursor: pointer; padding: 10px;
+            border-radius: 8px; border: 2px solid transparent; transition: border-color 0.2s;
         }
-        .gift-item.selected {
-            border-color: var(--primary-color);
-            background: #ffe6f0;
-        }
-        .gift-item img {
-            width: 50px;
-            height: 50px;
-        }
-        .gift-info { font-size: 0.8em; margin-top: 5px; }
+        .gift-item.selected { border-color: var(--primary-color); background: rgba(255, 255, 255, 0.1); }
+        .gift-item img { width: 50px; height: 50px; }
+        .gift-info { font-size: 0.8em; margin-top: 5px; color: var(--text-light); }
         .gift-send-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;
         }
         .gift-send-controls button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
+            background: var(--primary-color); color: white; border: none; padding: 10px 20px;
+            border-radius: 20px; cursor: pointer; font-weight: bold;
         }
         #quantityInput { width: 50px; padding: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; }
         .current-diamond-balance { font-weight: bold; color: var(--secondary-color); }
@@ -243,22 +254,29 @@
 </div>
 
 <div class="main-content">
-    <div class="mic-area" id="micArea">
+    <div class="center-stage">
+        <div id="ownerFrame" class="owner-frame-container"></div>
+        <img id="ownerProfilePic" class="owner-profile" src="https://i.pravatar.cc/150?img=1" alt="Owner">
+        <span id="ownerUsernameDisplay" class="owner-username">Room Owner</span>
+    </div>
+
+    <div class="mic-grid-small" id="micArea">
         </div>
     
     <div class="chat-area">
         <div class="messages" id="messages">
             </div>
         <div class="chat-input">
-            <input type="text" id="chatInput" placeholder="Send a message..." maxlength="100">
+            <input type="text" id="chatInput" placeholder="Let's talk! Type a message..." maxlength="100">
             <button id="sendChatBtn">Send</button>
         </div>
     </div>
 </div>
 
 <div class="footer-controls">
-    <button id="toggleGiftPanelBtn" class="control-btn">🎁 Send Gift</button>
-    <button id="musicControlBtn" class="control-btn" disabled>🎵 Play Music (Coming Soon)</button>
+    <button id="toggleGiftPanelBtn" style="background: none; border: none; font-size: 2em; cursor: pointer;">
+        <span style="filter: drop-shadow(0 0 5px var(--primary-color));">🎁</span>
+    </button>
     <span id="userDiamondFooter" class="current-diamond-balance">💎 0</span>
 </div>
 
@@ -276,22 +294,24 @@
 </div>
 
 <script>
-    const API_URL = ''; // Same domain
+    const API_URL = ''; 
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('id');
     let currentUser = JSON.parse(localStorage.getItem('currentUser'));
     let selectedGift = null;
-    let roomOwner = ''; // To highlight the owner's name/mic
+    let roomOwner = ''; 
 
-    // --- Gift Definitions (Must match the gifts in your database logic) ---
+    // --- UPDATED GIFT DEFINITIONS (High-Value Items) ---
     const GIFTS = [
-        { name: 'Rose', cost: 10, imageUrl: 'https://i.ibb.co/L519W3P/rose.png' },
+        { name: 'Rose', cost: 10, imageUrl: 'https://i.ibb.co/L519W3P/rose.png' }, 
         { name: 'Heart', cost: 100, imageUrl: 'https://i.ibb.co/3086x3M/heart.png' },
-        { name: 'Car', cost: 1000, imageUrl: 'https://i.ibb.co/p37160p/car.png' },
-        { name: 'Yacht', cost: 10000, imageUrl: 'https://i.ibb.co/2k90D37/yacht.png' }
+        { name: 'Luxury Car', cost: 7777, imageUrl: 'https://i.ibb.co/p37160p/car.png' },
+        { name: 'Star Crown', cost: 7777, imageUrl: 'https://i.ibb.co/L716k6k/crown.png' },
+        { name: 'Yacht', cost: 233280, imageUrl: 'https://i.ibb.co/2k90D37/yacht.png' }, 
+        { name: 'Royal Castle', cost: 1000000, imageUrl: 'https://i.ibb.co/N217k6s/castle.png' } // 10 Lakh Diamond
     ];
-    const MAX_SIT_SLOTS = 15; // Max seats in a standard room
+    const MIC_SLOTS_COUNT = 15; // Total slots (1 owner, 14 guests)
 
     if (!currentUser || !roomId) {
         alert('Invalid access. Please log in and select a room.');
@@ -300,7 +320,7 @@
 
     // --- Initialization ---
     document.addEventListener('DOMContentLoaded', () => {
-        setupMicSlots();
+        setupMicSlots(); // Only sets up slots 2 through 15
         renderGifts();
         updateDiamondDisplay(currentUser.diamonds);
         socket.emit('joinRoom', { roomId: roomId, username: currentUser.username });
@@ -333,14 +353,15 @@
         }
         
         messagesDiv.appendChild(msgEl);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; 
     }
 
     function setupMicSlots() {
         const micArea = document.getElementById('micArea');
         micArea.innerHTML = '';
         
-        for (let i = 1; i <= MAX_SIT_SLOTS; i++) {
+        // Slots 2 to 15 (1 is reserved for the Owner on center stage)
+        for (let i = 2; i <= MIC_SLOTS_COUNT; i++) {
             const slotEl = document.createElement('div');
             slotEl.className = 'mic-slot';
             slotEl.id = `mic-${i}`;
@@ -348,32 +369,39 @@
             slotEl.onclick = () => requestMic(i);
             
             slotEl.innerHTML = `
-                <span class="mic-number">#${i}</span>
                 <img class="mic-img" src="https://i.pravatar.cc/150?img=6" alt="Sit" />
-                <span class="mic-username">Tap to Sit</span>
+                <span class="mic-number">#${i}</span>
             `;
             micArea.appendChild(slotEl);
         }
     }
-
+    
     function updateMicSlot(slot, user, avatar) {
+        if (slot === 1) {
+            // Update Center Stage (Owner)
+            document.getElementById('ownerProfilePic').src = avatar || 'https://i.pravatar.cc/150?img=1';
+            document.getElementById('ownerUsernameDisplay').textContent = user || 'Room Owner';
+            // Note: The frame is static for now, but would be dynamically loaded based on user's VIP status
+            return;
+        }
+        
+        // Update Guest Slots (2-15)
         const slotEl = document.getElementById(`mic-${slot}`);
         if (!slotEl) return;
         
         const imgEl = slotEl.querySelector('.mic-img');
-        const nameEl = slotEl.querySelector('.mic-username');
         
         if (user) {
             slotEl.classList.add('occupied');
             imgEl.src = avatar;
-            nameEl.textContent = user;
+            imgEl.title = user; // Show username on hover/tap
         } else {
             slotEl.classList.remove('occupied');
             imgEl.src = 'https://i.pravatar.cc/150?img=6'; // Default image
-            nameEl.textContent = 'Tap to Sit';
+            imgEl.title = 'Tap to Sit';
         }
     }
-
+    
     // --- Gifting Panel Logic ---
     function renderGifts() {
         const grid = document.getElementById('giftGrid');
@@ -392,18 +420,16 @@
         });
     }
 
-    function selectGift(gift) {
+    function selectGift(gift) { /* ... (Same as previous implementation) ... */
         document.querySelectorAll('.gift-item').forEach(item => item.classList.remove('selected'));
         document.querySelector(`.gift-item[data-name="${gift.name}"]`).classList.add('selected');
-        
         selectedGift = gift;
-        
         document.getElementById('quantityInput').disabled = false;
         document.getElementById('quantityInput').value = 1;
         updateGiftSendButton();
     }
     
-    function updateGiftSendButton() {
+    function updateGiftSendButton() { /* ... (Same as previous implementation) ... */
         const sendBtn = document.getElementById('sendGiftFinalBtn');
         const quantityInput = document.getElementById('quantityInput');
         const quantity = parseInt(quantityInput.value) || 1;
@@ -458,7 +484,6 @@
                 diamondCost: selectedGift.cost, 
                 quantity: quantity 
             });
-            // Hide panel after sending
             document.getElementById('giftPanel').classList.remove('visible');
         }
     };
@@ -474,13 +499,18 @@
         document.getElementById('currentRoomName').textContent = info.name;
         document.getElementById('roomLevelInfo').textContent = `LVL ${info.roomLevel}`;
         roomOwner = info.ownerUsername;
+        
+        // Update the Center Stage with Owner info immediately
+        updateMicSlot(1, info.ownerUsername, info.ownerProfilePic);
+        
         appendMessage('system', 'System', `Joined room: ${info.name}. Room Owner: ${roomOwner}`);
     });
     
     socket.on('initialMicState', (micSlots) => {
-        for (const slot in micSlots) {
-            const { username, avatar } = micSlots[slot];
-            updateMicSlot(slot, username, avatar);
+        // Update all slots including the owner slot (slot 1)
+        for (let i = 1; i <= MIC_SLOTS_COUNT; i++) {
+            const slotData = micSlots[i] || {};
+            updateMicSlot(i, slotData.username, slotData.avatar);
         }
     });
 
@@ -494,34 +524,18 @@
     
     socket.on('diamondUpdate', ({ newBalance, newLevel }) => {
         updateDiamondDisplay(newBalance);
-        // Note: Client should refresh profile page to see the level update fully, but we show the balance immediately.
-        // For a full app, you would update the user's level on the footer too.
         if (newLevel) {
             currentUser.level = newLevel;
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            // You might want to update the displayed level on rooms.html too!
         }
     });
 
     // --- Mic Request Handler ---
     function requestMic(slot) {
-        // Prevent sitting if you are the owner and slot 1 is reserved for you (owner logic is primarily server-side)
-        if (document.getElementById(`mic-${slot}`).classList.contains('occupied')) {
-            // Logic to step down or mute/unmute should be here (complex for frontend only)
-            // For now, only allow stepping up.
+        if (currentUser.username === roomOwner) {
+            alert('Owner cannot step on guest mics.');
             return;
         }
-        
-        if (confirm(`Requesting Mic Slot #${slot}. Continue?`)) {
-             // Send request to server. Server handles all checks (15 sit limit, owner slot etc.)
-            socket.emit('requestMic', {
-                roomId: roomId,
-                slot: slot,
-                username: currentUser.username
-            });
-        }
-    }
 
-</script>
-</body>
-    </html>
-    
+        if (docum
