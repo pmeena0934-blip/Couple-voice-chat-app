@@ -1,4 +1,4 @@
-// models/Gift.js (Complete New File)
+// models/Gift.js (Complete File - UPDATED for Entry Effect)
 
 const mongoose = require('mongoose');
 
@@ -11,7 +11,7 @@ const GiftSchema = new mongoose.Schema({
     diamondCost: {
         type: Number,
         required: true,
-        min: 1 // Minimum cost is 1 diamond
+        min: 1 
     },
     category: {
         type: String,
@@ -22,14 +22,18 @@ const GiftSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // For large gifts (e.g., 1 lakh diamond), we can trigger a system announcement
     isSuperGift: {
         type: Boolean,
         default: false
+    },
+    // NEW: Field to trigger special entry effects
+    entryEffect: {
+        type: String,
+        enum: [null, 'car', 'plane', 'frame'],
+        default: null
     }
 });
 
 const Gift = mongoose.model('Gift', GiftSchema);
 
 module.exports = Gift;
-      
