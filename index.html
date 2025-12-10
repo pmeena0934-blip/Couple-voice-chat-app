@@ -18,10 +18,8 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* Login के समय background-color: #f4f4f9; */
             background-color: #f4f4f9;
         }
-        /* Login Modal की स्टाइलिंग अब login-modal.css से आनी चाहिए, लेकिन यह inline CSS भी काम करेगा */
         .login-modal {
             background-color: #fff;
             padding: 30px;
@@ -33,14 +31,12 @@
         /* Hide the main app UI initially, it will be shown after login */
         #app-ui {
             display: none; 
-            /* इसे Love Cafe UI के लिए फुल स्क्रीन पर सेट करें */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #1a1a2e; /* Dark background color of Love Cafe UI */
-            /* Flexbox डिस्प्ले जो showAppUI() में सेट है, उसे यहाँ भी रखें */
+            background-color: #1a1a2e; 
             justify-content: center; 
             align-items: center;
         }
@@ -64,12 +60,21 @@
             </header>
 
             <div class="host-area">
+                
                 <div class="seat host-seat" id="host-seat">
-                    <img src="https://i.pravatar.cc/150?img=1" alt="Host" class="avatar">
+                    <div class="level-info">
+                        <span class="level-badge" id="host-level">LV 150</span> 
+                        <div class="xp-bar-container"><div class="xp-bar" style="width: 100%;"></div></div>
+                    </div>
+                    
+                    <div class="avatar-container active-frame"> 
+                        <img src="https://i.pravatar.cc/150?img=1" alt="Host" class="avatar">
+                    </div>
+                    
                     <div class="mic-icon active">🎤</div>
                     <span class="username">Host Annie 👑</span>
                 </div>
-            </div>
+                </div>
 
             <div class="seats-grid" id="seats-grid">
                 <div class="seat empty-seat"><span>+</span></div> 
@@ -100,7 +105,7 @@
         // --- Login/Authentication Logic ---
         function showAppUI(user) {
             loginModal.style.display = 'none';
-            appUi.style.display = 'flex'; // UI को Flexbox के साथ दिखाएँ (पूरा स्क्रीन कवर करने के लिए)
+            appUi.style.display = 'flex'; // UI को Flexbox के साथ दिखाएँ
             userInfoDisplay.textContent = `User: ${user.username} | Diamonds: ${user.diamonds}`;
             
             // Socket.io कनेक्शन लॉजिक
@@ -111,7 +116,11 @@
                 socket.emit('join_room', { roomId, userId: user.username }); 
             });
             
-            // Note: Login के बाद, आप यहां पर रूम UI को डायनामिक रूप से अपडेट कर सकते हैं।
+            // ********** वॉयस चैट शुरू करें **********
+            if (typeof window.initVoiceChat === 'function') {
+                window.initVoiceChat(); 
+            }
+            // ****************************************
         }
 
         // चेक करें कि यूज़र पहले से लॉगिन है या नहीं
@@ -191,13 +200,10 @@
         };
         
         window.sendChatMessage = function() {
-            const message = prompt("Enter your chat message:");
-            if (message) {
-                 // Socket.io से चैट इवेंट भेजें
-                socket.emit('chat_message', { userId: localStorage.getItem('username'), message: message });
-            }
+            // ... चैट लॉजिक ...
         };
 
     </script>
 </body>
-</html>
+                                                 </html>
+                                              
