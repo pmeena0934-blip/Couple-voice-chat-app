@@ -9,38 +9,13 @@
     <link rel="stylesheet" href="login-modal.css"> 
     
     <style>
-        /* CSS for the Login Modal (Added for initial display) */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f4f4f9;
-        }
-        .login-modal {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            width: 300px;
-        }
-        /* Hide the main app UI initially, it will be shown after login */
-        #app-ui {
-            display: none; 
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #1a1a2e; 
-            justify-content: center; 
-            align-items: center;
-        }
-        /* Style for the Modals (Profile Edit & Buy Diamonds) */
-        .edit-modal {
+        /* CSS for the Login Modal */
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f4f9; }
+        .login-modal { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: center; width: 300px; }
+        #app-ui { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1a1a2e; justify-content: center; align-items: center; }
+        
+        /* Style for all Modals */
+        .app-modal {
             position: fixed;
             top: 50%;
             left: 50%;
@@ -53,9 +28,11 @@
             display: none;
             color: #333;
             width: 90%;
-            max-width: 350px;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
-        .edit-modal input, .edit-modal button {
+        .app-modal input, .app-modal button {
             display: block;
             margin: 10px 0;
             padding: 10px;
@@ -64,33 +41,59 @@
             border-radius: 5px;
             border: 1px solid #ccc;
         }
-        .edit-modal button {
+        .app-modal button { cursor: pointer; background-color: #ff69b4; color: white; border: none; font-weight: bold; }
+        .app-modal h3 { color: #1a1a2e; }
+        .app-modal .upi-info { border: 2px solid #2ecc71; background: #eafaf1; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        .app-modal .upi-info p { margin: 5px 0; color: #27ae60; font-weight: 600; }
+        
+        /* Gift Store Specific CSS */
+        #gift-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .gift-item {
+            border: 1px solid #eee;
+            padding: 8px;
+            text-align: center;
+            border-radius: 5px;
             cursor: pointer;
-            background-color: #ff69b4;
-            color: white;
-            border: none;
+            transition: transform 0.2s;
+        }
+        .gift-item:hover {
+            transform: scale(1.05);
+            border-color: #ff69b4;
+        }
+        .gift-item img { width: 50px; height: 50px; margin-bottom: 5px; }
+        .gift-item .cost { font-size: 0.9em; color: #ff69b4; font-weight: bold; }
+        
+        /* Global Announcement */
+        #global-announcement-bar {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 215, 0, 0.9);
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
             font-weight: bold;
+            display: none;
+            animation: slideDown 0.5s ease-out;
         }
-        .edit-modal h3 {
-            color: #1a1a2e;
-        }
-        .edit-modal .upi-info {
-             border: 2px solid #2ecc71; 
-             background: #eafaf1;
-             padding: 15px;
-             margin-bottom: 15px;
-             border-radius: 8px;
-        }
-        .edit-modal .upi-info p {
-            margin: 5px 0;
-            color: #27ae60;
-            font-weight: 600;
+        @keyframes slideDown {
+            from { top: -50px; opacity: 0; }
+            to { top: 10px; opacity: 1; }
         }
     </style>
 </head>
 <body>
 
     <div id="user-info"></div>
+    <div id="global-announcement-bar"></div>
 
     <div class="login-modal" id="login-modal">
         <h2>Welcome to the App</h2>
@@ -98,7 +101,7 @@
         <button onclick="handleLogin()">Login / Register</button>
     </div>
     
-    <div class="edit-modal" id="edit-modal">
+    <div class="app-modal" id="edit-modal">
         <h3>Edit Profile/Room</h3>
         <input type="text" id="edit-username" placeholder="New Username (optional)">
         <input type="text" id="edit-roomname" placeholder="New Room Name">
@@ -107,13 +110,11 @@
         <button onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
     </div>
 
-    <div class="edit-modal" id="buy-modal">
+    <div class="app-modal" id="buy-modal">
         <h3>Buy Diamonds (UPI)</h3>
         
         <div class="upi-info">
             <p>💰 **Package:** 500 Diamonds for ₹200</p>
-            <p>1. Scan the QR Code (Placeholder Image/Link):</p>
-            <p style="font-size: 12px; color: #34495e;"></p>
             <p>2. Pay to UPI ID: **couplechatowner@upi**</p>
         </div>
 
@@ -122,6 +123,25 @@
         
         <button onclick="handleDiamondPurchase()">Submit Payment Request (₹200)</button>
         <button onclick="document.getElementById('buy-modal').style.display='none'">Cancel</button>
+    </div>
+
+    <div class="app-modal" id="gift-store-modal">
+        <h3>🎁 Send a Gift</h3>
+        <p>Select a gift to send to the host:</p>
+        <div id="gift-list">
+            </div>
+        <button onclick="document.getElementById('gift-store-modal').style.display='none'" style="margin-top: 20px;">Close</button>
+    </div>
+    
+    <div class="app-modal" id="create-room-modal">
+        <h3>Create Your Room</h3>
+        <input type="text" id="new-room-name" placeholder="Enter Room Name">
+        <label style="display: block; margin: 10px 0; font-weight: bold;">
+            <input type="checkbox" id="is-vip-room" style="width: auto; margin-right: 10px;">
+            VIP Room (200 Diamonds / 30 Days)
+        </label>
+        <button onclick="handleRoomCreation()">Create Room</button>
+        <button onclick="document.getElementById('create-room-modal').style.display='none'">Cancel</button>
     </div>
 
 
@@ -133,7 +153,6 @@
             </header>
 
             <div class="host-area">
-                
                 <div class="seat host-seat" id="host-seat">
                     <div class="level-info">
                         <span class="level-badge" id="host-level">LV 150</span> 
@@ -147,17 +166,12 @@
                     <div class="mic-icon active">🎤</div>
                     <span class="username" id="host-username">Host Annie 👑</span>
                 </div>
-                </div>
+            </div>
 
             <div class="seats-grid" id="seats-grid">
                 <div class="seat cohost-seat" id="seat-2">
-                    <div class="level-info">
-                        <span class="level-badge">LV 5</span> 
-                        <div class="xp-bar-container"><div class="xp-bar" style="width: 50%;"></div></div>
-                    </div>
-                    <div class="avatar-container"> 
-                        <img src="https://i.pravatar.cc/150?img=2" alt="Co-Host 1" class="avatar">
-                    </div>
+                    <div class="level-info"><span class="level-badge">LV 5</span><div class="xp-bar-container"><div class="xp-bar" style="width: 50%;"></div></div></div>
+                    <div class="avatar-container"><img src="https://i.pravatar.cc/150?img=2" alt="Co-Host 1" class="avatar"></div>
                     <div class="mic-icon">🎤</div>
                     <span class="username">Demo 1</span>
                 </div>
@@ -175,19 +189,15 @@
                 <div class="seat empty-seat" id="seat-13"><span>+</span></div> 
                 <div class="seat empty-seat" id="seat-14"><span>+</span></div> 
                 <div class="seat empty-seat" id="seat-15"><span>+</span></div> 
-                
             </div>
 
             <div class="footer-controls">
                 <button class="btn" onclick="sendChatMessage()">💬 Chat</button>
-                <button class="btn gift-btn" onclick="simulateGift(500)">🎁 Gift (500)</button>
-                <button class="btn" onclick="showBuyModal()">💰 Buy Diamonds</button>
+                <button class="btn gift-btn" onclick="showGiftStore()">🎁 Gift Store</button> <button class="btn" onclick="showBuyModal()">💰 Buy Diamonds</button>
                 <button class="btn" onclick="showEditModal()">⚙️ Edit Profile</button>
-                <button class="btn">🚪 Leave</button>
-            </div>
+                <button class="btn" onclick="showCreateRoomModal()">🏡 Create Room</button> </div>
 
             <div id="notification-area"></div>
-            
             <div id="gift-animation-container"></div>
         </div>
     </div>
@@ -202,8 +212,13 @@
         const userInfoDisplay = document.getElementById('user-info');
         const appUi = document.getElementById('app-ui');
         const editModal = document.getElementById('edit-modal');
-        const buyModal = document.getElementById('buy-modal'); // New
-
+        const buyModal = document.getElementById('buy-modal');
+        const giftStoreModal = document.getElementById('gift-store-modal'); // New
+        const createRoomModal = document.getElementById('create-room-modal'); // New
+        const globalAnnouncementBar = document.getElementById('global-announcement-bar'); // New
+        
+        let availableGifts = []; // To store gifts from the API
+        
         // --- Utility Functions ---
         function getStoredUser() {
             const username = localStorage.getItem('username');
@@ -219,6 +234,45 @@
             document.getElementById('current-room-name').textContent = user.roomName;
             userInfoDisplay.textContent = `User: ${user.username} | Diamonds: ${user.diamonds}`;
         }
+        
+        function showAnnouncement(message) {
+            globalAnnouncementBar.innerHTML = message;
+            globalAnnouncementBar.style.display = 'block';
+            setTimeout(() => {
+                globalAnnouncementBar.style.display = 'none';
+            }, 8000); // Display for 8 seconds
+        }
+
+        // --- Fetch Gifts ---
+        async function fetchGifts() {
+            try {
+                const response = await fetch('/api/gifts');
+                const data = await response.json();
+                if (data.success) {
+                    availableGifts = data.gifts.sort((a, b) => a.diamondCost - b.diamondCost);
+                    populateGiftStore(availableGifts);
+                }
+            } catch (error) {
+                console.error('Error fetching gifts:', error);
+            }
+        }
+        
+        function populateGiftStore(gifts) {
+            const giftListDiv = document.getElementById('gift-list');
+            giftListDiv.innerHTML = '';
+            
+            gifts.forEach(gift => {
+                const item = document.createElement('div');
+                item.className = 'gift-item';
+                item.innerHTML = `
+                    <img src="${gift.imageUrl}" alt="${gift.name}">
+                    <p>${gift.name}</p>
+                    <p class="cost">${gift.diamondCost} 💎</p>
+                `;
+                item.onclick = () => sendGiftFromStore(gift);
+                giftListDiv.appendChild(item);
+            });
+        }
 
         // --- Login/Authentication Logic ---
         function showAppUI(user) {
@@ -226,6 +280,7 @@
             appUi.style.display = 'flex'; 
             
             updateHostUI(user);
+            fetchGifts(); // Load gifts immediately after login
             
             const socket = io(); 
             window.socket = socket; 
@@ -234,6 +289,11 @@
                 const roomId = '101'; 
                 console.log('Attempting to join room 101 with ID:', user.username);
                 socket.emit('join_room', { roomId, userId: user.username }); 
+            });
+            
+            // New Socket Listener for Super Gift Announcement
+            socket.on('global_announcement', (data) => {
+                showAnnouncement(data.message);
             });
             
             if (typeof window.setupSocketListeners === 'function') {
@@ -252,10 +312,7 @@
 
         async function handleLogin() {
             const username = usernameInput.value.trim();
-            if (!username) {
-                alert('Please enter a username.');
-                return;
-            }
+            if (!username) { alert('Please enter a username.'); return; }
 
             try {
                 const response = await fetch('/api/login', {
@@ -303,12 +360,7 @@
                 const response = await fetch('/api/profile/edit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: oldUsername, 
-                        newUsername, 
-                        newRoomName, 
-                        newProfilePicUrl 
-                    })
+                    body: JSON.stringify({ username: oldUsername, newUsername, newRoomName, newProfilePicUrl })
                 });
 
                 const data = await response.json();
@@ -332,7 +384,7 @@
             }
         }
         
-        // --- Buy Diamonds Logic (NEW) ---
+        // --- Buy Diamonds Logic ---
         window.showBuyModal = function() {
             buyModal.style.display = 'block';
         }
@@ -342,10 +394,7 @@
             const utrNumber = document.getElementById('buy-utr').value.trim();
             const screenshotUrl = document.getElementById('buy-screenshot-url').value.trim();
 
-            if (!utrNumber || !screenshotUrl) {
-                alert('Please enter UTR and Screenshot URL.');
-                return;
-            }
+            if (!utrNumber || !screenshotUrl) { alert('Please enter UTR and Screenshot URL.'); return; }
 
             try {
                 const response = await fetch('/api/buy-diamonds', {
@@ -359,7 +408,7 @@
                 if (data.success) {
                     alert(data.message);
                     buyModal.style.display = 'none';
-                    document.getElementById('buy-utr').value = ''; // Clear fields
+                    document.getElementById('buy-utr').value = ''; 
                     document.getElementById('buy-screenshot-url').value = '';
                 } else {
                     alert('Purchase Failed: ' + data.message);
@@ -369,20 +418,20 @@
                 alert('An error occurred during purchase submission.');
             }
         }
-        // --- End Buy Diamonds Logic ---
+        
+        // --- Gift Store Logic (UPDATED) ---
+        window.showGiftStore = function() {
+            giftStoreModal.style.display = 'block';
+        }
 
-
-        // --- Gift/Chat Logic ---
-        window.simulateGift = function(amount) {
+        window.sendGiftFromStore = function(gift) {
             const currentUsername = localStorage.getItem('username');
-            if (!currentUsername) {
-                 alert('Please login first.');
-                 return;
-            }
+            const receiverId = 'HostAnnie'; // Fixed receiver for demo
+            const amount = gift.diamondCost;
             
-            // ToDo: Receiver should be dynamically selected, for now HostAnnie is fixed
-            const receiverId = 'HostAnnie'; 
-
+            // Close store modal
+            giftStoreModal.style.display = 'none';
+            
             fetch('/api/wallet/gift', {
                 method: 'POST',
                 headers: {
@@ -398,7 +447,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Gifting Successful! New Diamond Balance: ' + data.newBalance);
+                    alert(`Sent ${gift.name}! New Diamond Balance: ${data.newBalance}`);
                     localStorage.setItem('diamonds', data.newBalance);
                     updateHostUI(getStoredUser()); 
                     
@@ -407,22 +456,7 @@
                             sender: currentUsername,
                             receiver: receiverId,
                             amount: amount,
+                            giftName: gift.name,
                             roomId: '101',
-                            leveledUp: data.leveledUp || false
-                        });
-                    }
-                } else {
-                    alert('Gifting Failed: ' + (data.message || 'Check server logs.'));
-                }
-            })
-            .catch(error => console.error('Fetch Error:', error));
-        };
-        
-        window.sendChatMessage = function() {
-            alert('Chat functionality not yet implemented, but the button works!');
-        };
-
-    </script>
-</body>
-        </html>
-            
+                            isSuperGift: gift.isSuperGift, // Send super gift flag
+           
