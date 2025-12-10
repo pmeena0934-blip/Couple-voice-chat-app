@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couple Voice Chat App - Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+        .login-container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 300px; text-align: center; }
+        h2 { color: #5c677d; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #ff69b4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #e35099; }
+        #message { margin-top: 15px; padding: 10px; border-radius: 4px; font-weight: bold; word-wrap: break-word; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <h2>Couple Voice Chat Login</h2> 
+    <input type="text" id="usernameInput" placeholder="Enter Username">
+    <button onclick="handleLogin()">Login / Register</button>
+    <div id="message"></div>
+</div>
+
+<script>
+    const API_URL = '/api/login'; 
+    const messageDiv = document.getElementById('message');
+
+    async function handleLogin() {
+        const username = document.getElementById('usernameInput').value.trim();
+        
+        messageDiv.className = '';
+        messageDiv.innerHTML = 'Connecting...';
+
+        if (!username) {
+            messageDiv.className = 'error';
+            messageDiv.innerHTML = 'Error: Please enter a username.';
+            return;
+        }
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Success: Login or Registration was successful
+                messageDiv.className = 'success';
+                messageDiv.innerHTML = `${data.message} User: <strong>${data.user.username}</strong> | Diamonds: ${data.user.diamonds}<br>Redirecting...`;
+
+                // **********************************************
+                // *** नया लॉजिक: लोकल स्टोरेज में डेटा सेव करना और रीडायरेक्ट करना ***
+                // **********************************************
+                
+                // 1. यूजर डेटा को लोकल स्टोरेज में सेव करें
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                
+                // 2. 2 सेकंड बाद Rooms List पेज पर रीडायरेक्ट करें
+                setTimeout(() => {
+                    // अब हम rooms.html पर रीडायरेक्ट करेंगे
+                    window.location.href = '/rooms.html'; 
+                }, 2000);
+                // **********************************************
+
+            } else {
+                // Server returned an error (e.g., 500, 400, 503)
+                messageDiv.className = 'error';
+                messageDiv.innerHTML = `Login Failed (Status: ${response.status}): <strong>${data.message || 'Unknown server error.'}</strong>`;
+            }
+
+        } catch (error) {
+            // Network or Connection error (Server Down/Unreachable)
+            messageDiv.className = 'error';
+            messageDiv.innerHTML = `<strong>NETWORK ERROR:</strong> Could not connect to the server. Check if the server (Render) is running. <br> Full Error: ${error.message}`;
+        }
+    }
+</script>
+
+</body>
+</html>
