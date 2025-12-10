@@ -1,525 +1,370 @@
-// server.js (FINAL, COMPLETE, AND INTEGRATED CODE)
+// --- server.js (Final Complete and Corrected Backend Logic) ---
 
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const cors = require('cors');
+const socketIo = require('socket.io');
 const path = require('path');
-const multer = require('multer'); 
-const fs = require('fs');         
+const multer = require('multer');
+const fs = require('fs');
 
-// --- Import Models (CRITICAL: Ensure these models exist in models/ folder) ---
-// **NOTE: If you haven't created these models yet, you MUST create them.**
-const User = require('./models/User'); 
-const Transaction = require('./models/Transaction'); 
-const Room = require('./models/Room'); 
-const RechargeRequest = require('./models/RechargeRequest'); 
-
-// --- Import Utilities ---
-const { calculateNewLevel } = require('./utils/leveling'); 
-
-// --- App Setup ---
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Create upload directory if it doesn't exist
-const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// **CRITICAL:** Serve static files and uploaded files
-app.use(express.static(path.join(__dirname, 'public'))); 
-
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = socketIo(server);
 
-app.set('socketio', io);
+// --- Configuration and Middleware ---
+const PORT = process.env.PORT || 10000;
 
-// --- Database Connection ---
-const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app?retryWrites=true&w=majority&appName=Cluster0';
-
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB Atlas Connected');
-  })
-  .catch(err => {
-    console.error('MongoDB Atlas Connection Error:', err);
-    process.exit(1); 
-  });
-
-// **Multer Storage Configuration for Recharge Screenshots and Profile Pics**
+// Set up storage for uploaded files (profile pictures)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, UPLOADS_DIR);
+        cb(null, 'public/uploads/');
     },
     filename: (req, file, cb) => {
-        const type = file.fieldname.includes('profile') ? 'profile' : 'recharge';
-        const ext = path.extname(file.originalname);
-        cb(null, `${type}-${req.body.username || req.body.currentUsername || 'unknown'}-${Date.now()}${ext}`);
+        cb(null, Date.now() + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage }); 
+const upload = multer({ storage: storage });
 
-// --- Active Room States (In-memory store for Socket.io) ---
-const activeRooms = {}; 
-const MAX_SIT_SLOTS = 15; 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// --- API Routes ---
+// Create the uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'public/uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
 
-// ********** 1. LOGIN/REGISTRATION API **********
-app.post('/api/login', async (req, res) => {
+// --- FAKE DATABASE (In-Memory for demonstration) ---
+const users = {}; // { username: { password, diamonds, coins, ... } }
+const rooms = {}; // { roomId: { name, ownerUsername, micSlots, usersCount } }
+let nextRoomId = 10000;
+
+// --- User Model Structure (Default) ---
+function createNewUser(username, password) {
+    return {
+        username: username,
+        password: password,
+        id: Math.floor(100000000 + Math.random() * 900000000),
+        diamonds: 500, // Starting Diamonds
+        coins: 10,   // Starting Coins
+        level: 1,
+        charisma: 0,
+        contribution: 0,
+        profilePic: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 20),
+        socketId: null
+    };
+}
+
+// --- Room Model Structure ---
+function createNewRoom(name, ownerUsername) {
+    const micSlots = {};
+    for (let i = 1; i <= 10; i++) {
+        micSlots[i] = { username: null, avatar: null }; // Empty slot
+    }
+    // Owner is always on Mic 1
+    const owner = users[ownerUsername];
+    micSlots[1] = { 
+        username: owner.username, 
+        avatar: owner.profilePic 
+    };
+
+    return {
+        id: nextRoomId++,
+        name: name,
+        ownerUsername: ownerUsername,
+        roomLevel: 1,
+        micSlots: micSlots,
+        usersCount: 0,
+        currentUsers: {} // { socketId: username }
+    };
+}
+
+// --- API Routes (Login, Register, Rooms) ---
+
+// 1. Root/Home Route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 2. Registration
+app.post('/api/auth/register', (req, res) => {
+    const { username, password } = req.body;
+    if (users[username]) {
+        return res.json({ success: false, message: 'Username already taken.' });
+    }
+    const newUser = createNewUser(username, password);
+    users[username] = newUser;
+    console.log(`New user registered: ${username}`);
+    res.json({ success: true, message: 'Registration successful. Please log in.', user: newUser });
+});
+
+// 3. Login
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+    const user = users[username];
+    if (!user || user.password !== password) {
+        return res.json({ success: false, message: 'Invalid username or password.' });
+    }
+    res.json({ success: true, message: 'Login successful.', user: user });
+});
+
+// 4. Create Room
+app.post('/api/rooms/create', (req, res) => {
+    const { roomName, ownerUsername } = req.body;
+    if (!users[ownerUsername]) {
+        return res.json({ success: false, message: 'Owner not found.' });
+    }
+    const newRoom = createNewRoom(roomName, ownerUsername);
+    rooms[newRoom.id] = newRoom;
+    console.log(`Room created: ${newRoom.name} (ID: ${newRoom.id})`);
+    res.json({ success: true, message: 'Room created successfully.', room: newRoom });
+});
+
+// 5. Get All Rooms
+app.get('/api/rooms', (req, res) => {
+    const roomList = Object.values(rooms).map(room => ({
+        id: room.id,
+        name: room.name,
+        ownerUsername: room.ownerUsername,
+        usersCount: room.usersCount,
+        roomLevel: room.roomLevel
+    }));
+    res.json({ success: true, rooms: roomList });
+});
+
+// 6. Coin to Diamond Exchange
+app.post('/api/exchange/coin-to-diamond', (req, res) => {
     const { username } = req.body;
-    try {
-        let user = await User.findOne({ username });
-        if (!user) {
-            user = new User({ username, diamonds: 500, level: 0, coins: 0 }); 
-            await user.save();
-            return res.json({ success: true, message: 'Registration successful! 500 💎 credited.', user });
-        } else {
-            return res.json({ success: true, message: 'Login successful!', user });
-        }
-    } catch (error) {
-        console.error('Login/Registration Runtime Error:', error.message);
-        res.status(500).json({ success: false, message: 'Server error during authentication: ' + error.message });
+    const user = users[username];
+
+    if (!user) {
+        return res.json({ success: false, message: 'User not found.' });
     }
-});
-// *********************************************************
 
-// ********** 2. GET ALL ROOMS API **********
-app.get('/api/rooms', async (req, res) => {
-    try {
-        const rooms = await Room.find().sort({ createdAt: -1 }); 
-        res.json({ success: true, rooms });
-    } catch (error) {
-        console.error('Get Rooms Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching rooms.' });
+    const exchangeRate = 10; // 10 Coins = 1 Diamond
+    const coinsToExchange = 100; // Example: Minimum exchange amount
+    
+    if (user.coins < coinsToExchange) {
+        return res.json({ success: false, message: `Need at least ${coinsToExchange} Coins for exchange.` });
     }
+    
+    const diamondsGained = Math.floor(user.coins / exchangeRate);
+    const coinsDeducted = diamondsGained * exchangeRate;
+
+    user.coins -= coinsDeducted;
+    user.diamonds += diamondsGained;
+
+    console.log(`${username} exchanged ${coinsDeducted} Coins for ${diamondsGained} Diamonds.`);
+    
+    res.json({ 
+        success: true, 
+        message: `${diamondsGained} Diamonds added to your balance!`,
+        newDiamondBalance: user.diamonds,
+        newCoinBalance: user.coins
+    });
 });
-// ***************************************
 
-// ********** 3. ROOM CREATION API **********
-app.post('/api/room/create', async (req, res) => {
-    const { username, roomName, isVIP } = req.body;
-    const VIP_COST_DIAMONDS = 200; 
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const user = await User.findOne({ username }).session(session);
-        if (!user) {
-            await session.abortTransaction(); session.endSession();
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        const existingRoom = await Room.findOne({ ownerUsername: username }).session(session);
-        if (existingRoom) {
-            await session.abortTransaction(); session.endSession();
-            return res.status(400).json({ success: false, message: `You already own room: ${existingRoom.name}.` });
-        }
-        
-        let newRoomData = {
-            name: roomName,
-            ownerUsername: username,
-            roomId: Date.now().toString().slice(-5), 
-            isVIP: false,
-            ownerProfilePic: user.profilePic || 'https://i.pravatar.cc/150?img=1'
-        };
-
-        if (isVIP) {
-            if (user.diamonds < VIP_COST_DIAMONDS) {
-                await session.abortTransaction(); session.endSession();
-                return res.status(400).json({ success: false, message: `Insufficient diamonds. Requires ${VIP_COST_DIAMONDS} diamonds for VIP room.` });
-            }
-            
-            user.diamonds -= VIP_COST_DIAMONDS;
-            await user.save({ session });
-            
-            await new Transaction({
-                username: username,
-                type: 'room_creation_fee',
-                amount: VIP_COST_DIAMONDS,
-                details: `Created VIP room: ${roomName}`
-            }).save({ session });
-            
-            newRoomData.isVIP = true;
-        }
-
-        const newRoom = new Room(newRoomData);
-        await newRoom.save({ session });
-        await session.commitTransaction(); session.endSession();
-
-        res.json({ 
-            success: true, 
-            message: `Room "${newRoom.name}" created successfully.`, 
-            room: newRoom,
-            newDiamondBalance: user.diamonds 
-        });
-
-    } catch (error) {
-        await session.abortTransaction(); session.endSession();
-        console.error('Room Creation Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during room creation.' });
-    }
-});
-// *************************************************
-
-// ********** 4. USER PROFILE UPDATE API **********
-app.post('/api/user/profile/update', upload.single('profilePic'), async (req, res) => {
+// 7. Profile Update (Handling file upload for profile pic)
+app.post('/api/user/profile/update', upload.single('profilePic'), (req, res) => {
     const { currentUsername, newUsername } = req.body;
-    const newImagePath = req.file ? `/uploads/${req.file.filename}` : null;
+    const profilePicFile = req.file;
+
+    let user = users[currentUsername];
+    if (!user) {
+        return res.json({ success: false, message: 'User not found.' });
+    }
+
+    // Handle Username change
+    if (newUsername && newUsername !== currentUsername) {
+        if (users[newUsername]) {
+            // If the new username is already taken
+            return res.json({ success: false, message: 'New username is already taken.' });
+        }
+        
+        // Update username in the global user list and delete the old entry
+        user.username = newUsername;
+        users[newUsername] = user;
+        delete users[currentUsername];
+    }
     
-    try {
-        const updateFields = {};
-        
-        // 1. Check/Update Username
-        if (newUsername && newUsername !== currentUsername) {
-            const existingUser = await User.findOne({ username: newUsername });
-            if (existingUser) {
-                 if (newImagePath && req.file) fs.unlinkSync(req.file.path);
-                 return res.status(400).json({ success: false, message: 'Username already taken.' });
-            }
-            updateFields.username = newUsername;
-        }
-
-        // 2. Update Profile Picture
-        if (newImagePath) {
-            updateFields.profilePic = newImagePath;
-        }
-
-        const updatedUser = await User.findOneAndUpdate(
-            { username: currentUsername },
-            { $set: updateFields },
-            { new: true }
-        );
-        
-        if (!updatedUser) {
-             if (newImagePath && req.file) fs.unlinkSync(req.file.path);
-             return res.status(404).json({ success: false, message: 'Original user not found.' });
-        }
-
-        res.json({ success: true, message: 'Profile updated successfully.', user: updatedUser });
-
-    } catch (error) {
-        console.error('Profile Update Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during profile update.' });
+    // Handle Profile Picture update
+    if (profilePicFile) {
+        // The file is saved in public/uploads. Update the path in user data.
+        user.profilePic = `/uploads/${profilePicFile.filename}`;
     }
+
+    console.log(`Profile updated for: ${user.username}`);
+    res.json({ success: true, message: 'Profile updated.', user: user });
 });
-// ************************************************************
-
-// ********** 5. COIN TO DIAMOND EXCHANGE **********
-app.post('/api/exchange/coin-to-diamond', async (req, res) => {
-    const { username } = req.body;
-    const COINS_PER_DIAMOND = 10; 
-    const MIN_COINS_EXCHANGE = 100;
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const user = await User.findOne({ username }).session(session);
-
-        if (!user || user.coins < MIN_COINS_EXCHANGE) {
-            await session.abortTransaction(); session.endSession();
-            return res.status(400).json({ success: false, message: `Minimum ${MIN_COINS_EXCHANGE} coins required for exchange.` });
-        }
-
-        const diamondsToCredit = Math.floor(user.coins / COINS_PER_DIAMOND);
-        const coinsToDeduct = diamondsToCredit * COINS_PER_DIAMOND;
-
-        if (diamondsToCredit === 0) {
-            await session.abortTransaction(); session.endSession();
-            return res.status(400).json({ success: false, message: 'Not enough coins for a full exchange.' });
-        }
-
-        // 1. Update user balance
-        user.coins -= coinsToDeduct;
-        user.diamonds += diamondsToCredit;
-        await user.save({ session });
-
-        // 2. Log transaction
-        await new Transaction({
-            username,
-            type: 'coin_exchange',
-            amount: diamondsToCredit, 
-            details: `Exchanged ${coinsToDeduct} Coins for ${diamondsToCredit} 💎`
-        }).save({ session });
-        
-        await session.commitTransaction(); session.endSession();
-
-        res.json({ 
-            success: true, 
-            message: `${coinsToDeduct} Coins exchanged for ${diamondsToCredit} 💎.`,
-            newDiamondBalance: user.diamonds,
-            newCoinBalance: user.coins
-        });
-
-    } catch (error) {
-        await session.abortTransaction(); session.endSession();
-        console.error('Coin Exchange Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during coin exchange.' });
-    }
-});
-// ************************************************************
-
-// ********** 6. RECHARGE REQUEST API (Client Submission) **********
-app.post('/api/recharge/request', upload.single('screenshot'), async (req, res) => {
-    const { username, paidAmount, diamondAmount, utrNumber } = req.body;
-    const screenshotUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    if (!username || !utrNumber || !screenshotUrl || !paidAmount || !diamondAmount) {
-        if (req.file) fs.unlinkSync(req.file.path); 
-        return res.status(400).json({ success: false, message: 'Missing required fields (UTR or Screenshot).' });
-    }
-
-    try {
-        const existingRequest = await RechargeRequest.findOne({ utrNumber: utrNumber, status: 'pending' });
-        if (existingRequest) {
-            if (req.file) fs.unlinkSync(req.file.path);
-            return res.status(400).json({ success: false, message: 'A pending request with this UTR number already exists.' });
-        }
-
-        const newRequest = new RechargeRequest({
-            username,
-            paidAmount: parseFloat(paidAmount),
-            diamondAmount: parseInt(diamondAmount),
-            utrNumber,
-            screenshotUrl,
-            status: 'pending'
-        });
-
-        await newRequest.save();
-        res.json({ success: true, message: 'Recharge request submitted for verification.' });
-
-    } catch (error) {
-        console.error('Recharge Request Error:', error);
-        if (req.file) fs.unlinkSync(req.file.path);
-        res.status(500).json({ success: false, message: 'Server error during submission.' });
-    }
-});
-// ************************************************************
-
-// ********** 7. ADMIN: GET PENDING RECHARGE REQUESTS **********
-app.get('/api/admin/recharge/requests', async (req, res) => {
-    try {
-        const statusFilter = req.query.status || 'pending';
-        const requests = await RechargeRequest.find({ status: statusFilter }).sort({ createdAt: 1 });
-        res.json({ success: true, requests });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error fetching requests.' });
-    }
-});
-// **********************************************************
-
-// ********** 8. ADMIN: RECHARGE ACTION (ACCEPT/REJECT) **********
-app.post('/api/admin/recharge/action', async (req, res) => {
-    const { requestId, action, adminUsername } = req.body;
-    
-    if (action !== 'accepted' && action !== 'rejected') {
-        return res.status(400).json({ success: false, message: 'Invalid action.' });
-    }
-
-    const session = await mongoose.startSession();
-    session.startTransaction(); 
-
-    try {
-        const request = await RechargeRequest.findById(requestId).session(session);
-
-        if (!request || request.status !== 'pending') {
-            await session.abortTransaction(); session.endSession();
-            return res.status(400).json({ success: false, message: 'Request not found or already processed.' });
-        }
-        
-        // 1. Update Request Status
-        request.status = action;
-        request.adminActionBy = adminUsername;
-        request.updatedAt = Date.now();
-        await request.save({ session });
-
-        let successMessage = `Request rejected for user ${request.username}.`;
-        
-        if (action === 'accepted') {
-            const diamondAmount = request.diamondAmount;
-            
-            // 2. Add diamonds to the user's wallet
-            const user = await User.findOneAndUpdate(
-                { username: request.username },
-                { $inc: { diamonds: diamondAmount } },
-                { new: true, session }
-            );
-
-            // 3. Log the transaction
-            await new Transaction({
-                username: request.username,
-                type: 'recharge_credit',
-                amount: diamondAmount, 
-                details: `Recharge accepted by ${adminUsername}. Credited ${diamondAmount} 💎`
-            }).save({ session });
-            
-            successMessage = `Accepted! ${diamondAmount} 💎 credited to ${request.username}. New Balance: ${user.diamonds}`;
-        }
-        
-        // 4. Remove screenshot file after processing (Cleanup)
-        if (request.screenshotUrl) {
-            const filePath = path.join(__dirname, 'public', request.screenshotUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-
-        await session.commitTransaction(); 
-        session.endSession();
-        
-        res.json({ success: true, message: successMessage });
-
-    } catch (error) {
-        await session.abortTransaction(); 
-        session.endSession();
-        console.error('Recharge Action Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during transaction process.' });
-    }
-});
-// **************************************************************
 
 
-// --- Socket.io Logic (Gifting, Mic Slots, Chat) ---
+// --- Socket.io Logic (Live Chat and Mic Management) ---
 
 io.on('connection', (socket) => {
-    
+    console.log('A user connected:', socket.id);
+
+    let currentRoomId = null;
+
     // --- 1. Join Room ---
-    socket.on('joinRoom', async ({ roomId, username }) => { 
+    socket.on('joinRoom', ({ roomId, username }) => {
+        if (!rooms[roomId] || !users[username]) {
+            return socket.emit('error', 'Room or User not found.');
+        }
+
+        currentRoomId = roomId;
+        const room = rooms[roomId];
+        const user = users[username];
+        
         socket.join(roomId);
+        room.usersCount++;
+        room.currentUsers[socket.id] = username;
+        user.socketId = socket.id;
+
+        console.log(`${username} joined room ${roomId}`);
         
-        try {
-            const room = await Room.findOne({ roomId });
-            if (!room) {
-                socket.emit('systemMessage', { text: 'Error: Room not found.' });
-                return;
-            }
-            
-            if (!activeRooms[roomId]) {
-                activeRooms[roomId] = {
-                    info: room,
-                    micSlots: {}, // Key: slot number, Value: { username, avatar }
-                    users: {} // Key: username, Value: socketId
-                };
-            }
-            
-            activeRooms[roomId].users[username] = socket.id;
-
-            // Initialize Mic Slot 1 (Owner)
-            if (!activeRooms[roomId].micSlots[1]) {
-                const owner = await User.findOne({ username: room.ownerUsername });
-                if (owner) {
-                    activeRooms[roomId].micSlots[1] = {
-                        username: room.ownerUsername,
-                        avatar: owner.profilePic || 'https://i.pravatar.cc/150?img=1'
-                    };
-                }
-            }
-            
-            // Send initial room state to the joining user
-            socket.emit('roomInfo', {
-                name: room.name,
-                roomLevel: room.roomLevel,
-                ownerUsername: room.ownerUsername,
-                ownerProfilePic: room.ownerProfilePic
-            });
-            socket.emit('initialMicState', activeRooms[roomId].micSlots);
-            
-            // Notify others
-            io.to(roomId).emit('message', { type: 'system', username: 'System', text: `${username} has joined the room.` });
-
-        } catch (error) {
-            console.error('Join Room Error:', error);
-        }
+        // Send initial room info and mic state to the joining user
+        socket.emit('roomInfo', {
+            name: room.name,
+            roomLevel: room.roomLevel,
+            ownerUsername: room.ownerUsername,
+            ownerProfilePic: users[room.ownerUsername].profilePic
+        });
+        socket.emit('initialMicState', room.micSlots);
+        
+        // Notify everyone in the room
+        io.to(roomId).emit('message', { type: 'system', text: `${username} has joined the room.` });
     });
 
-    // --- 2. Handle Chat Messages ---
-    socket.on('sendMessage', ({ roomId, username, text }) => { 
+    // --- 2. Mic Request ---
+    socket.on('requestMic', ({ roomId, slot, username }) => {
+        const room = rooms[roomId];
+        const user = users[username];
+
+        if (!room || !user) return;
+        if (room.micSlots[slot].username) {
+            return socket.emit('message', { type: 'system', text: `Mic ${slot} is already occupied.` });
+        }
+        
+        // Occupy the mic slot
+        room.micSlots[slot] = { username: username, avatar: user.profilePic };
+        
+        // Broadcast the update
+        io.to(roomId).emit('micUpdate', { 
+            slot: slot, 
+            user: username, 
+            avatar: user.profilePic 
+        });
+        io.to(roomId).emit('message', { 
+            type: 'system', 
+            text: `${username} has taken Mic ${slot}.` 
+        });
+    });
+
+    // --- 3. Send Chat Message ---
+    socket.on('sendMessage', ({ roomId, username, text }) => {
         io.to(roomId).emit('message', { type: 'chat', username, text });
+        console.log(`Chat in ${roomId} from ${username}: ${text}`);
     });
 
-    // --- 3. Mic Slot Request (Sit Logic) ---
-    socket.on('requestMic', async ({ roomId, slot, username }) => { 
-        const roomState = activeRooms[roomId];
-        if (!roomState) return;
+    // --- 4. Send Gift ---
+    socket.on('sendGift', ({ roomId, username, giftName, diamondCost, quantity, targetUsername }) => {
+        const sender = users[username];
+        const room = rooms[roomId];
 
-        try {
-            const user = await User.findOne({ username });
-            if (!user) return;
+        if (!sender || !room) return;
 
-            if (slot === 1 && username !== roomState.info.ownerUsername) {
-                // Only owner can be on slot 1
-                socket.emit('message', { type: 'system', text: 'Mic #1 is reserved for the room owner.' });
-                return;
-            }
+        const totalCost = diamondCost * quantity;
+        if (sender.diamonds < totalCost) {
+            return socket.emit('message', { type: 'system', text: 'Insufficient diamonds to send gift.' });
+        }
+        
+        // Deduct diamonds from sender
+        sender.diamonds -= totalCost;
+        
+        // Give 'contribution' to sender (for level up)
+        sender.contribution += totalCost; 
+        
+        // Give 'charisma' to target (or room owner for simplicity)
+        const target = users[targetUsername];
+        if (target) {
+            target.charisma += totalCost;
+        }
 
-            if (roomState.micSlots[slot]) {
-                socket.emit('message', { type: 'system', text: `Mic #${slot} is already occupied.` });
-                return;
-            }
-            
-            // Clear user from any previous mic slot
-            for (const key in roomState.micSlots) {
-                if (roomState.micSlots[key].username === username) {
-                    delete roomState.micSlots[key];
-                    io.to(roomId).emit('micUpdate', { slot: key, user: null, avatar: null });
-                    break;
-                }
-            }
-
-            // Occupy the new slot
-            roomState.micSlots[slot] = {
-                username: username,
-                avatar: user.profilePic || 'https://i.pravatar.cc/150?img=1'
-            };
-
-            // Broadcast the update
-            io.to(roomId).emit('micUpdate', { 
-                slot: slot, 
-                user: username, 
-                avatar: roomState.micSlots[slot].avatar 
+        // Check for level up (simplistic example)
+        let newLevel = sender.level;
+        if (sender.contribution >= sender.level * 10000) { // Example logic
+            sender.level++;
+            newLevel = sender.level;
+            io.to(roomId).emit('message', { 
+                type: 'system', 
+                text: `${username} leveled up to Lv. ${sender.level}!` 
             });
-            io.to(roomId).emit('message', { type: 'system', text: `${username} sat on Mic #${slot}.` });
+        }
+        
+        // Notify sender of diamond balance update
+        socket.emit('diamondUpdate', { 
+            newBalance: sender.diamonds, 
+            newLevel: newLevel 
+        });
 
-        } catch (error) {
-            console.error('Request Mic Error:', error);
+        // Broadcast gift message to everyone in the room
+        io.to(roomId).emit('message', { 
+            type: 'gift', 
+            username: username, 
+            text: `${quantity}x ${giftName} to ${targetUsername}` 
+        });
+        console.log(`${username} sent ${quantity}x ${giftName} in room ${roomId}`);
+    });
+
+    // --- 5. Disconnect ---
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        if (currentRoomId && rooms[currentRoomId]) {
+            const room = rooms[currentRoomId];
+            const username = room.currentUsers[socket.id];
+            
+            if (username) {
+                // Remove user from room and update count
+                room.usersCount--;
+                delete room.currentUsers[socket.id];
+                
+                // Remove user from mic slot if they were on one
+                for (let i = 1; i <= 10; i++) {
+                    if (room.micSlots[i].username === username) {
+                        room.micSlots[i] = { username: null, avatar: null };
+                        io.to(currentRoomId).emit('micUpdate', { 
+                            slot: i, 
+                            user: null, 
+                            avatar: null 
+                        });
+                    }
+                }
+                
+                // Notify room members
+                io.to(currentRoomId).emit('message', { 
+                    type: 'system', 
+                    text: `${username} has left the room.` 
+                });
+            }
         }
     });
 
-    // --- 4. Handle Gifts (Gifting, Coins, and Leveling) ---
-    socket.on('sendGift', async ({ roomId, username, giftName, diamondCost, quantity }) => { 
-        const roomState = activeRooms[roomId];
-        if (!roomState) return;
-        const totalCost = diamondCost * quantity;
+});
+
+// --- Initial Dummy Data for Testing ---
+users['testuser'] = createNewUser('testuser', 'password');
+users['testuser'].diamonds = 10000;
+users['Meena9090'] = createNewUser('Meena9090', '12345');
+users['Meena9090'].diamonds = 500;
+rooms[14931] = createNewRoom('Yaro ki duniya', 'Meena9090');
+rooms[14931].id = 14931; // Fix ID for consistency
+
+
+// --- Start Server ---
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Frontend available on http://localhost:${PORT}`);
+});
+// --- End of server.js ---
         
-        const session = await mongoose.startSession();
-        session.startTransaction();
-
-        try {
-            const user = await User.findOne({ username }).session(session);
-            const room = await Room.findOne({ roomId }).session(session);
-
-            if (!user || user.diamonds < totalCost || !room) {
-                await session.abortTransaction(); session.endSession();
-                socket.emit('message', { type: 'system', text: 'Transaction failed: Insufficient diamonds or invalid room/user.' });
-                return;
-            }
-
-            // 1. Deduct diamonds from sender
-            user.diamonds -= totalCost;
-            await user.save({ session });
-
-            // 2. Credit coins to room owner
-            const owner = await User.findOne({ username: room.ownerUsername }).session(session);
-            const coinsToCredit = totalCost * 0.5; // Example: Owner gets 50% of diamond value as coins
-            owner.coins += coinsToCredit;
-            
-            // 3. Update owner level (Example: 1 XP per diamond spent)
-            owner.experience += totalCost;
