@@ -1,11 +1,14 @@
-// server.js (Complete File - Updated with Profile Edit API)
+// server.js (Complete File - UPDATED with UPI Payment Logic)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+
+// --- Import Models ---
 const User = require('./models/User');
+const Transaction = require('./models/Transaction'); // New Transaction Model
 
 // --- Import Routes ---
 const walletRoutes = require('./routes/wallet');
@@ -62,7 +65,7 @@ app.post('/api/login', async (req, res) => {
 });
 // *************************************
 
-// ********** PROFILE AND ROOM EDIT API (New Addition) **********
+// ********** PROFILE AND ROOM EDIT API **********
 app.post('/api/profile/edit', async (req, res) => {
     const { username, newUsername, newRoomName, newProfilePicUrl } = req.body;
 
@@ -75,7 +78,6 @@ app.post('/api/profile/edit', async (req, res) => {
         
         let updateFields = {};
         
-        // Update username if provided
         if (newUsername && newUsername !== user.username) {
             const existingUser = await User.findOne({ username: newUsername });
             if (existingUser) {
@@ -84,25 +86,17 @@ app.post('/api/profile/edit', async (req, res) => {
             updateFields.username = newUsername;
         }
 
-        // Update profile picture URL
         if (newProfilePicUrl) {
             updateFields.profilePic = newProfilePicUrl; 
         }
 
-        // Update room name
         if (newRoomName) {
             updateFields.roomName = newRoomName; 
         }
         
         const updatedUser = await User.findOneAndUpdate({ username }, { $set: updateFields }, { new: true });
 
-        // Update localStorage data if username was changed
-        const newUserData = { 
-            ...updatedUser.toObject(), 
-            // In a real app, you'd send a socket update to clients 
-        };
-
-        return res.json({ success: true, message: 'Profile updated successfully!', user: newUserData });
+        return res.json({ success: true, message: 'Profile updated successfully!', user: updatedUser });
 
     } catch (error) {
         console.error('Profile Edit Error:', error);
@@ -110,6 +104,91 @@ app.post('/api/profile/edit', async (req, res) => {
     }
 });
 // ***********************************************
+
+// ********** DIAMOND PURCHASE API (User Submission - NEW) **********
+app.post('/api/buy-diamonds', async (req, res) => {
+    // Note: Payment package is 500 Diamonds for 200 Rs (Hardcoded for demo)
+    const { username, utrNumber, screenshotUrl } = req.body;
+    const diamondAmount = 500;
+    const fiatAmount = 200;
+
+    if (!username || !utrNumber || !screenshotUrl) {
+        return res.status(400).json({ success: false, message: 'Username, UTR, and Screenshot URL are required.' });
+    }
+
+    try {
+        // Check if UTR number is already in process
+        const existingTransaction = await Transaction.findOne({ utrNumber });
+        if (existingTransaction) {
+            return res.status(400).json({ success: false, message: 'This UTR number is already recorded.' });
+        }
+
+        const newTransaction = new Transaction({
+            username,
+            diamondAmount,
+            fiatAmount,
+            utrNumber,
+            screenshotUrl,
+            status: 'Pending'
+        });
+
+        await newTransaction.save();
+        
+        // Admin को सूचित करने का लॉजिक यहाँ आएगा (Socket.io या ईमेल)
+
+        res.json({ success: true, message: 'Payment request submitted successfully. Diamonds will be credited after verification.' });
+
+    } catch (error) {
+        console.error('Diamond Purchase Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during transaction submission.' });
+    }
+});
+// *************************************************************
+
+// ********** ADMIN APPROVAL API (Manual Logic - NEW) **********
+// Note: This needs an external admin dashboard or a separate secure UI for you (the owner)
+app.post('/api/admin/approve-payment', async (req, res) => {
+    // AdminId यहाँ सुरक्षा के लिए होना चाहिए, लेकिन अभी के लिए सरलता के लिए छोड़ा गया है
+    const { transactionId, status } = req.body; 
+
+    if (!transactionId || !['Approved', 'Rejected'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid approval details or status.' });
+    }
+
+    try {
+        const transaction = await Transaction.findById(transactionId);
+
+        if (!transaction || transaction.status !== 'Pending') {
+            return res.status(404).json({ success: false, message: 'Transaction not found or already processed.' });
+        }
+
+        transaction.status = status;
+        transaction.approvedBy = 'OwnerID'; // Replace with actual Admin/Owner ID later
+        await transaction.save();
+
+        if (status === 'Approved') {
+            const user = await User.findOne({ username: transaction.username });
+
+            if (user) {
+                user.diamonds += transaction.diamondAmount;
+                await user.save();
+                
+                // Front-end को सूचित करें कि डायमंड्स क्रेडिट हो गए हैं
+                //io.to(user.socketId).emit('diamonds_credited', { amount: transaction.diamondAmount, newBalance: user.diamonds });
+                
+                res.json({ success: true, message: `Payment approved. ${transaction.diamondAmount} Diamonds credited to ${user.username}.` });
+                return;
+            }
+        }
+
+        res.json({ success: true, message: `Payment ${status.toLowerCase()} successful.` });
+
+    } catch (error) {
+        console.error('Admin Approval Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during approval process.' });
+    }
+});
+// *************************************************************
 
 
 // --- HOMEPAGE ROUTE (index.html) ---
@@ -122,60 +201,43 @@ app.get('/', (req, res) => {
 const userRoomMap = {};
 // ************************************************************************
 
-// --- Socket.io Logic (UPDATED) ---
+// --- Socket.io Logic ---
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     
-    // जब कोई यूज़र किसी रूम में शामिल होता है
     socket.on('join_room', ({ roomId, userId }) => {
         socket.join(roomId);
         userRoomMap[socket.id] = { roomId, userId };
         
         console.log(`${userId} joined room ${roomId}`);
 
-        // उस रूम के सभी क्लाइंट को सूचित करें कि एक नया यूज़र आया है
         const currentRoom = io.sockets.adapter.rooms.get(roomId);
         const count = currentRoom ? currentRoom.size : 1;
         io.to(roomId).emit('user_joined', { userId, count });
 
-        // रूम में मौजूद बाकी सभी यूज़र्स को संकेत भेजें (WebRTC के लिए)
         if(currentRoom) {
             const otherUsers = Array.from(currentRoom).filter(id => id !== socket.id);
-            socket.emit('all_other_users', { users: otherUsers }); // केवल नए यूज़र को बाकी की सूची भेजें
+            socket.emit('all_other_users', { users: otherUsers }); 
         }
     });
 
-    // WebRTC सिग्नलिंग: 1. OFFER
+    // WebRTC Signaling: OFFER, ANSWER, ICE CANDIDATE
     socket.on('webrtc_offer', (data) => {
-        io.to(data.target).emit('webrtc_offer', {
-            sender: socket.id,
-            offer: data.offer
-        });
+        io.to(data.target).emit('webrtc_offer', { sender: socket.id, offer: data.offer });
     });
-
-    // WebRTC सिग्नलिंग: 2. ANSWER
     socket.on('webrtc_answer', (data) => {
-        io.to(data.target).emit('webrtc_answer', {
-            sender: socket.id,
-            answer: data.answer
-        });
+        io.to(data.target).emit('webrtc_answer', { sender: socket.id, answer: data.answer });
     });
-
-    // WebRTC सिग्नलिंग: 3. ICE CANDIDATE
     socket.on('webrtc_ice_candidate', (data) => {
-        io.to(data.target).emit('webrtc_ice_candidate', {
-            sender: socket.id,
-            candidate: data.candidate
-        });
+        io.to(data.target).emit('webrtc_ice_candidate', { sender: socket.id, candidate: data.candidate });
     });
     
-    // गिफ्ट भेजने पर सभी को सूचित करें
+    // Gift sending notification
     socket.on('send_gift_realtime', (data) => {
         io.to(data.roomId).emit('gift_received_animation', data);
     });
 
-
-    // जब यूज़र डिस्कनेक्ट होता है
+    // Disconnect handling
     socket.on('disconnect', () => {
         const roomInfo = userRoomMap[socket.id];
         if (roomInfo) {
@@ -185,7 +247,6 @@ io.on('connection', (socket) => {
         console.log('User disconnected:', socket.id);
     });
 });
-// --- End of Socket.io Logic ---
 
 
 const PORT = process.env.PORT || 5000;
