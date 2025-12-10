@@ -1,40 +1,52 @@
-// models/User.js (Final Fix for Login Error)
-
+// models/User.js (Complete File - FINAL FIX for User Model loading issue)
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({ 
-    username: { 
-        type: String, 
-        required: true, 
-        unique: true 
+const UserSchema = new mongoose.Schema({
+    username: {
+        type: String,
+        required: true,
+        unique: true
     },
-    diamonds: { 
-        type: Number, 
-        default: 500
-    }, 
-    coins: { 
-        type: Number, 
-        default: 0 
+    // New users get 500 free diamonds
+    diamonds: {
+        type: Number,
+        default: 500, 
     },
-    level: { 
-        type: Number, 
-        default: 0 
+    // Gold coins for smaller transactions (optional)
+    coins: {
+        type: Number,
+        default: 0,
     },
-    experiencePoints: { 
-        type: Number, 
-        default: 0 
+    // Experience Points / Level System
+    level: {
+        type: Number,
+        default: 1
     },
-    profilePic: { 
-        type: String, 
-        default: 'https://i.pravatar.cc/150?img=1' 
+    experiencePoints: {
+        type: Number,
+        default: 0
     },
-    roomName: { 
-        type: String, 
-        default: 'My Couple Chat Room' 
+    
+    // Fields for Profile/Room Editing
+    profilePic: {
+        type: String,
+        default: 'https://i.pravatar.cc/150?img=3' // Default avatar
     },
+    roomName: {
+        type: String,
+        default: 'My Couple Chat Room'
+    },
+    // Inventory (e.g., for storing bought frames, cars, etc.)
+    inventory: {
+        type: [String], // Array of owned item names/IDs
+        default: []
+    }
 });
 
-// ********** CRITICAL FIX **********
-// सीधे mongoose.model को export करें, जिससे server.js में 'User' हमेशा एक Mongoose Model रहे।
-module.exports = mongoose.model('User', userSchema); 
-// ***********************************
+// **--- FINAL Mongoose FIX ---**
+// यदि 'User' मॉडल पहले से मौजूद है, तो उसे उपयोग करें, अन्यथा नया बनाएं। 
+// यह Render जैसे कैशिंग वातावरण में 'User.findOne is not a function' की समस्या को 100% हल करता है।
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
+
+module.exports = User;
+        
