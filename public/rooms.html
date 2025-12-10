@@ -12,43 +12,59 @@
             padding-bottom: 70px; 
         }
         
-        /* --- Top Header --- */
-        .top-banner {
-            background: linear-gradient(135deg, #a737ff 0%, #ff5c77 100%);
-            padding: 20px 0;
-            text-align: center;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* --- Top Header (Simplified) --- */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: white;
+            border-bottom: 1px solid #eee;
         }
-        .top-banner h1 { margin: 0; font-size: 1.5em; }
+        .back-btn { font-size: 1.5em; color: #555; text-decoration: none; }
+        .store-icon { font-size: 1.5em; color: #ff69b4; text-decoration: none; }
+        .top-header h1 { font-size: 1.2em; margin: 0; color: #333; }
+        
+        /* --- Diamond/Coin Balance --- */
+        .balance-info {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 5px 15px;
+            background-color: white;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .balance-info span { margin-left: 10px; }
 
         /* --- Tabs --- */
         .tabs-header {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             background-color: white;
-            padding: 10px 0;
+            padding: 10px 15px;
             border-bottom: 1px solid #eee;
             position: sticky;
             top: 0;
             z-index: 10;
         }
+        .tab-group { display: flex; }
         .tab-link {
             text-decoration: none;
             font-size: 1em;
             color: #555;
-            padding: 5px 15px;
+            padding: 5px 10px;
             cursor: pointer;
             position: relative;
         }
         .tab-link.active {
-            color: #5c677d;
+            color: #ff69b4;
             font-weight: bold;
         }
         .tab-link.active::after {
             content: '';
             position: absolute;
-            bottom: -10px;
+            bottom: -5px;
             left: 50%;
             transform: translateX(-50%);
             width: 70%;
@@ -57,10 +73,62 @@
             border-radius: 2px;
         }
 
+        /* --- Banner Section (Pink Star Secret) --- */
+        .main-banner {
+            width: 100%;
+            height: 150px;
+            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4XjD4n6B-H8xN_Jg9Yg2fJ0n5x9R5wQ&s'); /* Placeholder image */
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .main-banner-text {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            color: #ff69b4;
+            font-size: 1.2em;
+        }
+        .game-box-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #8bc34a;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* --- Middle Feature Tabs (Ranking, Game, Family) --- */
+        .feature-tabs {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 15px;
+            background-color: #fff;
+            margin-bottom: 10px;
+        }
+        .feature-item {
+            text-align: center;
+            padding: 5px;
+            flex-basis: 30%;
+            border-radius: 8px;
+            background: linear-gradient(to bottom right, #f8f8f8, #e8e8e8);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .feature-item img { width: 40px; height: 40px; margin-bottom: 5px; }
+        .feature-item p { margin: 0; font-size: 0.8em; color: #555; font-weight: bold; }
+
         /* --- Category Filters --- */
         .category-filters {
             display: flex;
-            padding: 10px 20px;
+            padding: 10px 15px;
             overflow-x: auto;
             white-space: nowrap;
             background-color: #f0f0ff;
@@ -164,11 +232,7 @@
             color: #333; 
         }
 
-        /* --- Message/Error Styling --- */
-        #message { text-align: center; color: red; margin-top: 20px; padding: 10px; background-color: #ffe0e6; border-radius: 5px; }
-        #userInfo { text-align: center; margin-top: 20px; color: #5c677d; font-size: 0.9em; }
-
-        /* --- Bottom Navigation (Visual Placeholder) --- */
+        /* --- Bottom Navigation --- */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -184,21 +248,66 @@
         }
         .nav-item { text-align: center; font-size: 0.8em; color: #999; }
         .nav-item.active { color: #ff69b4; }
+        .nav-item-icon { font-size: 1.5em; margin-bottom: 3px; }
+
+        /* --- Download App Button --- */
+        .download-app-link {
+            position: fixed;
+            bottom: 70px;
+            right: 15px;
+            background: linear-gradient(45deg, #00bcd4, #00e5ff);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 30;
+        }
     </style>
 </head>
 <body>
 
-<div class="top-banner">
-    <h1>Group Voice Chat</h1>
-    <p>Play With Global Friends</p>
+<div class="top-header">
+    <a href="#" class="back-btn">⬅️</a>
+    <h1 style="color: #5c677d;">Store</h1>
+    <a href="#" class="store-icon">🛒</a>
+</div>
+<div class="balance-info">
+    <span>Balance: 🪙 10</span>
+    <span>💎 1+</span>
 </div>
 
 <div class="tabs-header">
-    <a href="#" class="tab-link">Related</a>
-    <a href="#" class="tab-link active">Explore</a>
-    <a href="#" class="tab-link">Event</a>
-    <a href="#" class="tab-link">Disc</a>
-    <a href="#" class="tab-link">Search</a>
+    <div class="tab-group">
+        <a href="#" class="tab-link">Related</a>
+        <a href="#" class="tab-link active">Explore</a>
+        <a href="#" class="tab-link">Event</a>
+        <a href="#" class="tab-link">Disc</a>
+    </div>
+    <a href="#" class="tab-link">🔍</a>
+</div>
+
+<div style="position: relative;">
+    <div class="main-banner">
+        <div class="game-box-btn" onclick="alert('Opening Game Box!')">Open Game Box</div>
+        <div class="main-banner-text">Pink Star Secret</div>
+    </div>
+</div>
+
+<div class="feature-tabs">
+    <div class="feature-item" onclick="alert('Opening Ranking!')">
+        <img src="https://via.placeholder.com/40/d4af37/ffffff?text=👑" alt="Ranking">
+        <p>Ranking</p>
+    </div>
+    <div class="feature-item" onclick="alert('Opening Game!')">
+        <img src="https://via.placeholder.com/40/9c27b0/ffffff?text=🎮" alt="Game">
+        <p>Game</p>
+    </div>
+    <div class="feature-item" onclick="alert('Opening Family!')">
+        <img src="https://via.placeholder.com/40/ff9800/ffffff?text=🏰" alt="Family">
+        <p>Family</p>
+    </div>
 </div>
 
 <div class="category-filters">
@@ -209,6 +318,30 @@
 </div>
 
 <div class="room-list-container">
+    
+    <h3 style="color: #333; margin-top: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Recommend user in the room</h3>
+    <div style="display: flex; overflow-x: auto; white-space: nowrap; margin-bottom: 20px;">
+        <div style="text-align: center; margin-right: 15px; cursor: pointer;">
+            <img src="https://i.pravatar.cc/150?img=4" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
+            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">big...</p>
+        </div>
+         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
+            <img src="https://i.pravatar.cc/150?img=5" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
+            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Kavya Sh...</p>
+        </div>
+         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
+            <img src="https://i.pravatar.cc/150?img=6" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
+            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">puja</p>
+        </div>
+         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
+            <img src="https://i.pravatar.cc/150?img=7" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
+            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Deepa</p>
+        </div>
+         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
+            <img src="https://i.pravatar.cc/150?img=8" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
+            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Team</p>
+        </div>
+    </div>
     
     <div class="create-room-box">
         <h3>Create Your Room</h3>
@@ -226,11 +359,26 @@
     <div id="userInfo"></div>
 </div>
 
+<a href="#" class="download-app-link" onclick="handleAppDownload()">Download App</a>
+
+
 <div class="bottom-nav">
-    <div class="nav-item">🏠 Home</div>
-    <div class="nav-item active">🎉 Party</div>
-    <div class="nav-item">💬 Chat</div>
-    <div class="nav-item">👤 Mine</div>
+    <div class="nav-item">
+        <div class="nav-item-icon">🏠</div>
+        Home
+    </div>
+    <div class="nav-item active">
+        <div class="nav-item-icon">🎉</div>
+        Party
+    </div>
+    <div class="nav-item">
+        <div class="nav-item-icon">💬</div>
+        Chat
+    </div>
+    <div class="nav-item">
+        <div class="nav-item-icon">👤</div>
+        Mine
+    </div>
 </div>
 
 
@@ -247,7 +395,11 @@
     if (!currentUser) {
         window.location.href = '/';
     } else {
-        userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
+        // Updated balance display to match the real UI style
+        document.querySelector('.balance-info').innerHTML = `
+            <span>Balance: 🪙 10</span>
+            <span>💎 ${currentUser.diamonds}+</span>
+        `;
     }
 
     async function fetchRooms() {
@@ -259,7 +411,7 @@
             const data = await response.json();
 
             if (response.ok && data.success) {
-                messageDiv.textContent = ''; // Clear loading message
+                messageDiv.textContent = ''; 
 
                 if (data.rooms.length === 0) {
                     roomListDiv.innerHTML = '<p style="text-align:center; padding: 20px;">No rooms found. Use the box above to create the first room!</p>';
@@ -286,9 +438,7 @@
                             <span>${userCount}</span>
                         </div>
                     `;
-                    // ***** FIX: Join Logic now redirects to room.html *****
                     roomCard.onclick = () => joinRoom(room.roomId); 
-                    // *******************************************************
                     roomListDiv.appendChild(roomCard);
                 });
 
@@ -328,14 +478,17 @@
             if (response.ok && data.success) {
                 alert(data.message);
                 
-                // Update local storage and UI balance
                 if (isVIP) {
                     currentUser.diamonds = data.newDiamondBalance;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
+                    // Update the diamond balance display on success
+                     document.querySelector('.balance-info').innerHTML = `
+                        <span>Balance: 🪙 10</span>
+                        <span>💎 ${currentUser.diamonds}+</span>
+                    `;
                 }
-                document.getElementById('newRoomNameInput').value = ''; // Clear input
-                fetchRooms(); // Reload the room list
+                document.getElementById('newRoomNameInput').value = ''; 
+                fetchRooms(); 
             } else {
                 alert(`Failed to create room: ${data.message || 'Server error'}`);
                 messageDiv.textContent = `Error: ${data.message || 'Failed to create room.'}`;
@@ -346,16 +499,32 @@
         }
     }
     
-    // ***** FIX: Updated Join Room Function *****
     function joinRoom(roomId) {
-        // Navigate to the new live room page, passing the room ID in the URL
         window.location.href = `/room.html?id=${roomId}`;
     }
-    // *******************************************
+    
+    // --- Download App Logic ---
+    function handleAppDownload() {
+        // 1. यदि आप Android APK फ़ाइल का नाम जानते हैं, तो उसे यहां उपयोग करें।
+        // उदाहरण: 'https://yourdomain.com/downloads/couple-voice-chat.apk'
+        const apkUrl = '/couple-voice-chat.apk'; 
+        
+        // 2. फ़ाइल को डाउनलोड करने के लिए window.location.href का उपयोग करें
+        alert('App download is starting now...');
+        window.location.href = apkUrl;
+        
+        // **NOTE:** यह तभी काम करेगा जब आपके `public` फ़ोल्डर में APK फ़ाइल मौजूद हो
+        // और आपके `server.js` में उसे सर्व करने के लिए एक रूट बनाया गया हो।
+        
+        // **अगर APK फ़ाइल आपके पास नहीं है:**
+        // आप इसे Play Store या किसी अन्य जगह के लिंक पर रीडायरेक्ट कर सकते हैं।
+        // // window.open('YOUR_PLAY_STORE_LINK', '_blank'); 
+    }
+    // **************************
 
-    fetchRooms(); // Call the function when the page loads
+    fetchRooms(); 
 </script>
 
 </body>
     </html>
-    
+                
