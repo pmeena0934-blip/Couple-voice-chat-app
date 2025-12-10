@@ -1,4 +1,4 @@
-// server.js (FINAL VERSION with Login Route and Homepage serving)
+// server.js (FINAL VERSION - URI with Query Parameters)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -27,9 +27,9 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 // --- Database Connection ---
-// ********** यह लाइन अब 100% सही है **********
-const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app';
-// **********************************************
+// ********** MONGODB_URI में QUERY PARAMETERS जोड़े गए हैं **********
+const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app?retryWrites=true&w=majority&appName=Cluster0';
+// *******************************************************************
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Atlas Connected'))
@@ -99,3 +99,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
+      
