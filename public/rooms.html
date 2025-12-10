@@ -3,384 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Chat Rooms</title>
+    <title>Voice Chat - Party</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f4f7f6; 
-            color: #333; 
-            margin: 0; 
+        /* --- General Styling and Theme --- */
+        :root {
+            --primary-color: #ff3366; /* Bright Pink */
+            --secondary-color: #9933ff; /* Purple */
+            --text-light: #333;
+            --bg-light: #f5f5f5; /* Light subtle background */
+            --tab-active-bg: linear-gradient(90deg, #ff3366, #ff88aa);
+            --card-bg: white;
         }
-        .header {
-            background-color: #ff69b4;
-            color: white;
-            padding: 15px;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-light);
+            margin: 0;
+            padding: 0;
+            color: var(--text-light);
+            min-height: 100vh;
+        }
+
+        /* --- Header and Navigation --- */
+        .top-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-        .header h1 { margin: 0; font-size: 1.5em; }
-        
-        /* --- Profile and Balance --- */
-        .profile-section {
+        .top-nav h1 { margin: 0; font-size: 1.5em; font-weight: 300; }
+        .user-info {
             display: flex;
             align-items: center;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 5px;
-            transition: background 0.2s;
+            gap: 10px;
         }
-        .profile-section:hover { background: rgba(255, 255, 255, 0.1); }
+        .user-info a { color: white; text-decoration: none; font-size: 0.9em; }
 
-        .profile-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid white;
+        /* --- Top Tabs (Related, Explore, Event) --- */
+        .main-tabs {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
-        .user-info {
-            margin-left: 10px;
-            text-align: left;
-        }
-        .user-info strong {
-            display: block;
+        .main-tabs button {
+            background: none;
+            border: none;
+            color: #888;
             font-size: 1.1em;
-        }
-        .user-balance span {
-            display: inline-block;
-            margin-right: 10px;
-            font-size: 0.9em;
-            font-weight: bold;
+            padding: 5px 15px;
             cursor: pointer;
+            transition: color 0.3s;
         }
-        .diamond-icon { color: #00bcd4; }
-        .coin-icon { color: gold; }
+        .main-tabs button.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            font-weight: bold;
+        }
 
-        /* --- Room Grid --- */
-        .container {
-            padding: 20px;
-            max-width: 1200px;
-            margin: auto;
+        /* --- Explore Content (Screen 1000080552) --- */
+        #exploreContent {
+            padding: 15px;
         }
-        .room-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+        .explore-banner {
+            margin-bottom: 20px;
+            text-align: center;
+            background: url('https://i.ibb.co/L519W3P/banner-bg.jpg') no-repeat center center/cover;
+            border-radius: 15px;
+            padding: 30px 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .explore-banner h2 { color: white; margin: 0; font-size: 1.8em; }
+
+        /* --- Category Buttons (Ranking, Game, Family) --- */
+        .category-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .category-btn {
+            flex-grow: 1;
+            text-align: center;
+            padding: 15px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+            background: #9933ff; /* Default purple */
+        }
+        .category-btn:nth-child(1) { background: linear-gradient(135deg, #ffd700, #ffb800); color: #333; } /* Gold */
+        .category-btn:nth-child(2) { background: linear-gradient(135deg, #00c6ff, #0072ff); } /* Blue */
+        .category-btn:nth-child(3) { background: linear-gradient(135deg, #ff66b2, #cc0066); } /* Hot Pink */
+
+        /* --- Room List Tabs (Recommend, New, Game, Blind Date) --- */
+        .room-filter-tabs {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .room-filter-tabs button {
+            background: #eee;
+            color: #555;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s, color 0.2s;
+        }
+        .room-filter-tabs button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* --- Room Card List --- */
+        #roomsContainer {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
         .room-card {
+            display: flex;
+            align-items: center;
             background: white;
+            padding: 15px;
             border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             cursor: pointer;
+            border-left: 5px solid var(--primary-color);
+            transition: transform 0.2s;
         }
         .room-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
         }
-        .room-header {
-            background-color: #5c677d;
-            color: white;
-            padding: 10px;
-            font-size: 1.1em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .room-header.vip {
-            background-color: #ffc107;
-            color: #333;
-            font-weight: bold;
-        }
-        .room-details {
-            padding: 15px;
-            display: flex;
-            align-items: center;
-        }
-        .owner-img {
+        .room-avatar {
             width: 60px;
             height: 60px;
             border-radius: 50%;
             object-fit: cover;
             margin-right: 15px;
-            border: 3px solid #ff69b4;
+            border: 2px solid var(--secondary-color);
         }
-        .room-info h3 {
-            margin: 0 0 5px;
-            color: #ff69b4;
+        .room-details {
+            flex-grow: 1;
         }
-        .room-info p {
+        .room-details h3 {
             margin: 0;
-            font-size: 0.9em;
-            color: #777;
+            font-size: 1.1em;
+            color: var(--secondary-color);
+        }
+        .room-details p {
+            margin: 3px 0 0;
+            font-size: 0.8em;
+            color: #888;
+        }
+        .live-count {
+            color: var(--primary-color);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .live-count::before {
+            content: '•';
+            font-size: 1.5em;
         }
 
-        /* --- Create Room Button --- */
-        #createRoomBtn {
+        /* --- Floating Button (Create Room) --- */
+        .fab {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background-color: #00bcd4;
+            bottom: 80px; /* Above the footer */
+            right: 20px;
+            background: var(--primary-color);
             color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-size: 1.1em;
-            font-weight: bold;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             cursor: pointer;
-            transition: background 0.2s;
+            border: none;
         }
-        #createRoomBtn:hover {
-            background-color: #0097a7;
+        
+        /* --- Bottom Navigation (Footer) --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            padding: 5px 0;
+            z-index: 10;
+        }
+        .nav-item {
+            text-align: center;
+            font-size: 0.7em;
+            padding: 5px 0;
+            color: #888;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .nav-item i {
+            font-size: 1.5em;
+            display: block;
+            margin-bottom: 2px;
         }
 
         /* --- Modal for Room Creation --- */
         .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 100; 
+            display: none;
+            position: fixed;
+            z-index: 20;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            padding-top: 60px;
+            background-color: rgba(0,0,0,0.7);
         }
         .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 30px;
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
             border-radius: 10px;
             width: 80%;
             max-width: 400px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: #000;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .modal-content input[type="text"], 
-        .modal-content button {
-            width: 100%;
+        .modal-content input[type="text"] {
+            width: 90%;
             padding: 10px;
-            margin: 8px 0;
-            display: inline-block;
+            margin-bottom: 15px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+            border-radius: 5px;
         }
         .modal-content button {
-            background-color: #ff69b4;
-            color: white;
+            padding: 10px 15px;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            margin-right: 10px;
         }
+        #createStandardRoomBtn { background: var(--secondary-color); color: white; }
+        #createVIPRoomBtn { background: var(--primary-color); color: white; }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
-<div class="header">
-    <div class="profile-section" onclick="goToProfile()">
-        <img id="userProfilePic" class="profile-img" src="https://i.pravatar.cc/150?img=1" alt="Profile">
-        <div class="user-info">
-            <strong id="currentUsername">Guest</strong>
-            <div class="user-balance">
-                <span onclick="goToRecharge(event)" class="diamond-icon">💎 <span id="userDiamondBalance">0</span>+</span>
-                <span class="coin-icon">💰 <span id="userCoinBalance">0</span></span>
-                <span id="userLevel">LVL 0</span>
-            </div>
-        </div>
+<div class="top-nav">
+    <div class="user-info">
+        <span id="welcomeUser">Welcome, User</span>
+        <a href="/profile.html" style="margin-left: 10px;">(Profile)</a>
     </div>
-    <h1>Voice Rooms</h1>
-    <a href="/" onclick="localStorage.removeItem('currentUser')">Logout</a>
+    <div class="user-info">
+        <span id="diamondBalance">💎 500</span>
+        <a href="/recharge.html" style="margin-left: 10px;">[Recharge]</a>
+    </div>
 </div>
 
-<div class="container">
-    <h2>Available Rooms</h2>
-    <p id="roomMessage">Loading rooms...</p>
-    <div class="room-grid" id="roomGrid">
-        </div>
+<div class="main-tabs">
+    <button class="active">Related</button>
+    <button id="exploreTabBtn">Explore</button>
+    <button>Event</button>
+    <button>Disc</button>
 </div>
 
-<button id="createRoomBtn">➕ Create New Room</button>
+<div id="exploreContent">
+    
+    <div class="explore-banner">
+        <h2>Moto Recharge Pack - Up to 100% Rebate</h2>
+    </div>
 
-<div id="roomModal" class="modal">
+    <div class="category-grid">
+        <div class="category-btn">Ranking</div>
+        <div class="category-btn">Game</div>
+        <div class="category-btn">Family</div>
+    </div>
+    
+    <div class="room-filter-tabs">
+        <button class="active">Recommend</button>
+        <button>New</button>
+        <button>Game</button>
+        <button>Blind date</button>
+    </div>
+
+    <div id="roomsContainer">
+        <p id="noRoomsMessage" style="text-align: center; color: #888; padding: 20px;">No rooms found. Time to create the first one!</p>
+    </div>
+</div>
+
+<button class="fab" id="openModalBtn">+</button>
+
+<div class="bottom-nav">
+    <a href="/" class="nav-item">
+        <i class="fas fa-home"></i> Home
+    </a>
+    <a href="/rooms.html" class="nav-item active">
+        <i class="fas fa-users"></i> Party
+    </a>
+    <a href="/chat.html" class="nav-item">
+        <i class="fas fa-comment-dots"></i> Chat
+    </a>
+    <a href="/profile.html" class="nav-item">
+        <i class="fas fa-user-circle"></i> Mine
+    </a>
+</div>
+
+<div id="createRoomModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h2>Create a Voice Room</h2>
-        <form id="roomCreationForm">
-            <label for="roomName">Room Name:</label>
-            <input type="text" id="roomName" placeholder="Enter room name" required maxlength="30">
-            
-            <label>
-                <input type="checkbox" id="isVIP" value="VIP">
-                Make VIP Room (Cost: 200 💎)
-            </label>
-            <p id="roomCreationMessage" style="color: red;"></p>
-            <button type="submit">Create Room</button>
-        </form>
+        <h2>Create Your Room</h2>
+        <input type="text" id="roomNameInput" placeholder="Enter Room Name (e.g., Love Chat, Party Room)">
+        <p id="roomCreationMessage" style="color: red;"></p>
+        <button id="createStandardRoomBtn">Create Standard Room</button>
+        <button id="createVIPRoomBtn">Create VIP Room (200 Diamonds)</button>
     </div>
 </div>
 
 <script>
-    const API_URL = ''; // Same domain
+    const API_URL = ''; 
+    const createRoomModal = document.getElementById('createRoomModal');
     let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
     if (!currentUser) {
+        alert('Please login first.');
         window.location.href = '/';
-    } else {
-        updateUserInfo(currentUser);
+    }
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('welcomeUser').textContent = `Welcome, ${currentUser.username}`;
+        updateBalanceDisplay(currentUser.diamonds);
         fetchRooms();
-    }
-    
-    // --- Helper Functions ---
-    function updateUserInfo(user) {
-        currentUser = user; // Update the global currentUser object
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        document.getElementById('currentUsername').textContent = user.username;
-        document.getElementById('userDiamondBalance').textContent = user.diamonds;
-        document.getElementById('userCoinBalance').textContent = user.coins || 0;
-        document.getElementById('userLevel').textContent = `LVL ${user.level || 0}`;
-        document.getElementById('userProfilePic').src = user.profilePic || 'https://i.pravatar.cc/150?img=1';
+    });
+
+    function updateBalanceDisplay(diamonds) {
+        document.getElementById('diamondBalance').textContent = `💎 ${diamonds}`;
     }
 
-    function goToRecharge(e) {
-        e.stopPropagation(); // Prevent the whole profile section click
-        window.location.href = '/recharge.html';
-    }
-    
-    function goToProfile() {
-        window.location.href = '/profile.html';
-    }
-
-    function closeModal() {
-        document.getElementById('roomModal').style.display = 'none';
-        document.getElementById('roomCreationForm').reset();
-        document.getElementById('roomCreationMessage').textContent = '';
-    }
-    
-    function openRoom(roomId) {
-        window.location.href = `/room.html?id=${roomId}`;
-    }
-
-    // --- Core Logic ---
-
-    // 1. Fetch Rooms and Render
+    // --- Fetch Rooms ---
     async function fetchRooms() {
-        document.getElementById('roomMessage').textContent = 'Loading rooms...';
         try {
-            const response = await fetch(`${API_URL}/api/rooms`);
+            const response = await fetch(API_URL + '/api/rooms');
             const data = await response.json();
-
+            const container = document.getElementById('roomsContainer');
+            container.innerHTML = '';
+            
             if (data.success && data.rooms.length > 0) {
-                renderRooms(data.rooms);
-                document.getElementById('roomMessage').textContent = '';
+                document.getElementById('noRoomsMessage').style.display = 'none';
+                data.rooms.forEach(room => {
+                    renderRoomCard(room, container);
+                });
             } else {
-                document.getElementById('roomMessage').textContent = 'No rooms found. Be the first to create one!';
-                document.getElementById('roomGrid').innerHTML = '';
+                document.getElementById('noRoomsMessage').style.display = 'block';
             }
         } catch (error) {
-            document.getElementById('roomMessage').textContent = 'Error loading rooms. Please check server connection.';
             console.error('Error fetching rooms:', error);
+            alert('Failed to load rooms.');
         }
     }
 
-    function renderRooms(rooms) {
-        const grid = document.getElementById('roomGrid');
-        grid.innerHTML = '';
-        rooms.forEach(room => {
-            const card = document.createElement('div');
-            card.className = 'room-card';
-            card.onclick = () => openRoom(room.roomId);
-            
-            card.innerHTML = `
-                <div class="room-header ${room.isVIP ? 'vip' : ''}">
-                    <span>${room.name}</span>
-                    <span>${room.isVIP ? '🌟 VIP' : '🎧 Public'} | LVL ${room.roomLevel}</span>
-                </div>
-                <div class="room-details">
-                    <img class="owner-img" src="${room.ownerProfilePic}" alt="Owner">
-                    <div class="room-info">
-                        <h3>Room ID: ${room.roomId}</h3>
-                        <p>Owner: ${room.ownerUsername}</p>
-                        <p>Total Listeners: 0 (Live Count Needed)</p>
-                    </div>
-                </div>
-            `;
-            grid.appendChild(card);
-        });
+    // --- Render Room Card ---
+    function renderRoomCard(room, container) {
+        const card = document.createElement('div');
+        card.className = 'room-card';
+        card.onclick = () => window.location.href = `/room.html?id=${room.roomId}`;
+        
+        const isVIP = room.isVIP ? '<span style="color: gold;">⭐ VIP</span>' : 'Public';
+        const roomLevel = room.roomLevel || 0; 
+        const liveCount = room.liveUsersCount || 1; // Start with owner count 1
+        
+        card.innerHTML = `
+            <img class="room-avatar" src="${room.ownerProfilePic || 'https://i.pravatar.cc/150?img=1'}" alt="Owner">
+            <div class="room-details">
+                <h3>${room.name} ${isVIP}</h3>
+                <p>Owner: ${room.ownerUsername} | LVL ${roomLevel}</p>
+                <p>ID: ${room.roomId}</p>
+            </div>
+            <div class="live-count">
+                ${liveCount}
+            </div>
+        `;
+        container.appendChild(card);
     }
 
-    // 2. Handle Room Creation
-    document.getElementById('createRoomBtn').onclick = () => {
-        document.getElementById('roomModal').style.display = 'block';
-    };
-
-    document.getElementById('roomCreationForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // --- Room Creation Logic ---
+    async function createRoom(isVIP) {
+        const roomName = document.getElementById('roomNameInput').value.trim();
+        const msgEl = document.getElementById('roomCreationMessage');
+        msgEl.textContent = '';
         
-        const roomName = document.getElementById('roomName').value;
-        const isVIP = document.getElementById('isVIP').checked;
-        const messageEl = document.getElementById('roomCreationMessage');
-        
-        messageEl.textContent = 'Creating room...';
+        if (!roomName) {
+            msgEl.textContent = 'Please enter a room name.';
+            return;
+        }
 
         try {
-            const response = await fetch(`${API_URL}/api/room/create`, {
+            const response = await fetch(API_URL + '/api/room/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     username: currentUser.username, 
-                    roomName, 
-                    isVIP 
+                    roomName: roomName, 
+                    isVIP: isVIP 
                 })
             });
-
             const data = await response.json();
-
+            
             if (data.success) {
-                messageEl.textContent = 'Room created! Redirecting...';
+                // Update local storage and UI balance
+                currentUser.diamonds = data.newDiamondBalance;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                updateBalanceDisplay(currentUser.diamonds);
+
+                alert(data.message);
                 
-                // Update local diamonds if VIP room was purchased
-                if (data.newDiamondBalance !== undefined) {
-                    currentUser.diamonds = data.newDiamondBalance;
-                    updateUserInfo(currentUser);
-                }
-                
-                closeModal();
-                openRoom(data.room.roomId); // Go to the newly created room
+                // Redirect to the new room immediately
+                window.location.href = `/room.html?id=${data.room.roomId}`;
 
             } else {
-                messageEl.textContent = 'Error: ' + data.message;
+                msgEl.textContent = data.message;
             }
-
         } catch (error) {
-            messageEl.textContent = 'Network Error: Could not reach server.';
-            console.error('Room creation error:', error);
+            console.error('Room creation failed:', error);
+            msgEl.textContent = 'Server error during room creation.';
         }
-    });
+    }
 
-    // Close modal on outside click
-    window.onclick = function(event) {
-        const modal = document.getElementById('roomModal');
-        if (event.target === modal) {
-            closeModal();
+    // --- Modal Event Listeners ---
+    document.getElementById('openModalBtn').onclick = () => {
+        createRoomModal.style.display = 'block';
+    };
+    window.onclick = (event) => {
+        if (event.target == createRoomModal) {
+            createRoomModal.style.display = 'none';
+            document.getElementById('roomCreationMessage').textContent = '';
         }
     };
+    document.getElementById('createStandardRoomBtn').onclick = () => createRoom(false);
+    document.getElementById('createVIPRoomBtn').onclick = () => createRoom(true);
 </script>
 </body>
-    </html>
+        </html>
             
