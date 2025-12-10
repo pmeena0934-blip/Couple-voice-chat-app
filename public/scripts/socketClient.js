@@ -1,46 +1,51 @@
-// public/scripts/socketClient.js
-const localVideo = document.createElement('video');
-localVideo.autoplay = true;
-localVideo.muted = true; // अपनी आवाज को म्यूट रखें
+// public/scripts/socketClient.js (WebRTC & Socket.io Logic)
 
-let peerConnection;
+// सुनिश्चित करें कि 'socket' वेरिएबल index.html से उपलब्ध है
+const socket = window.socket; 
+
 let localStream;
-const remoteConnections = {}; // अन्य यूज़र्स के कनेक्शन
+const remoteConnections = {}; // Key: remoteSocketId, Value: RTCPeerConnection object
+const remoteAudioElements = {}; // Key: remoteSocketId, Value: Audio element
 
-// WebRTC STUN/TURN सर्वर कॉन्फ़िगरेशन
 const iceServers = {
     iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }, // Google STUN server
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
     ]
 };
 
-// --- Media Stream (माइक्रोफ़ोन एक्सेस) ---
+// --- 1. Local Media Stream ---
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        // इस स्ट्रीम को PeerConnection में जोड़ा जाएगा
         console.log("Local audio stream started.");
+        
+        // Host की सीट पर माइक्रोफ़ोन को एक्टिवेट करें
+        const micIcon = document.querySelector('#host-seat .mic-icon');
+        if (micIcon) {
+            micIcon.classList.add('active');
+        }
+        
     } catch (error) {
         console.error("Error accessing microphone:", error);
     }
 }
 
-// --- Peer Connection बनाना और ऑफ़र/उत्तर भेजना ---
-function createPeerConnection(remoteSocketId) {
-    peerConnection = new RTCPeerConnection(iceServers);
+// --- 2. Peer Connection Logic ---
+function createPeerConnection(remoteSocketId, isRequester) {
+    const peerConnection = new RTCPeerConnection(iceServers);
     remoteConnections[remoteSocketId] = peerConnection;
 
-    // 1. लोकल स्ट्रीम ट्रैक जोड़ें
+    // A. Local Stream Track जोड़ें
     if (localStream) {
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
     }
 
-    // 2. ICE कैंडिडेट्स को संभालना (नेटवर्क जानकारी)
+    // B. ICE Candidates को संभालना
     peerConnection.onicecandidate = event => {
         if (event.candidate) {
-            // ICE कैंडिडेट को दूसरे यूज़र को भेजें
             socket.emit('webrtc_ice_candidate', {
                 target: remoteSocketId,
                 candidate: event.candidate
@@ -48,35 +53,105 @@ function createPeerConnection(remoteSocketId) {
         }
     };
 
-    // 3. रिमोट ट्रैक प्राप्त करना (दूसरे यूज़र की आवाज़)
+    // C. Remote Track प्राप्त करना
     peerConnection.ontrack = event => {
-        const audio = new Audio();
-        audio.autoplay = true;
-        audio.srcObject = event.streams[0];
-        // Note: यहाँ आपको इस ऑडियो को सही सीट (Host/Co-host) से मैप करना होगा
-        console.log("Received remote audio stream.");
+        if (event.streams && event.streams[0]) {
+            let audio = remoteAudioElements[remoteSocketId];
+            if (!audio) {
+                audio = new Audio();
+                audio.autoplay = true;
+                remoteAudioElements[remoteSocketId] = audio;
+                // इस ऑडियो को UI में किसी सीट से जोड़ना होगा (अभी के लिए hidden)
+                document.body.appendChild(audio);
+            }
+            audio.srcObject = event.streams[0];
+            console.log(`Received stream from ${remoteSocketId}`);
+        }
     };
-
+    
+    // D. यदि हम कॉल करने वाले हैं, तो ऑफर बनाएँ
+    if (isRequester) {
+        peerConnection.createOffer()
+            .then(offer => peerConnection.setLocalDescription(offer))
+            .then(() => {
+                socket.emit('webrtc_offer', {
+                    target: remoteSocketId,
+                    offer: peerConnection.localDescription
+                });
+            })
+            .catch(error => console.error("Error creating offer:", error));
+    }
+    
     return peerConnection;
 }
 
-// Socket.io कनेक्शन Logic (यह index.html में है)
-// यह सुनिश्चित करता है कि जब भी कोई नया यूज़र रूम में आता है, हम उसके साथ कनेक्शन शुरू करते हैं
-if (typeof socket !== 'undefined') {
-    socket.on('user_joined', ({ userId, count }) => {
-        console.log(`User ${userId} joined. Total users: ${count}`);
+// --- 3. Socket.io Handlers ---
 
-        // यदि हम पहले से ही रूम में हैं, तो नए यूज़र के लिए WebRTC कनेक्शन शुरू करें
-        // यहाँ जटिलता है क्योंकि एक 15-सीट रूम में, आपको सभी के साथ कनेक्शन नहीं बनाना पड़ता।
-        // सादगी के लिए, हम मानते हैं कि होस्ट ही सबसे पहले कनेक्शन बनाता है।
-        // For simplicity: If this is a Host-Client model, only the host initiates.
+// a) Room में मौजूद बाकी यूज़र्स से कनेक्शन शुरू करें (जब हम पहली बार रूम में आते हैं)
+socket.on('all_other_users', ({ users }) => {
+    users.forEach(userId => {
+        createPeerConnection(userId, true); // true = हम कॉल शुरू कर रहे हैं
     });
-}
+});
+
+// b) नया ऑफर प्राप्त करें (कोई हमें कॉल कर रहा है)
+socket.on('webrtc_offer', (data) => {
+    const peerConnection = createPeerConnection(data.sender, false); // false = हम कॉल रिसीव कर रहे हैं
+
+    peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+        .then(() => peerConnection.createAnswer())
+        .then(answer => peerConnection.setLocalDescription(answer))
+        .then(() => {
+            socket.emit('webrtc_answer', {
+                target: data.sender,
+                answer: peerConnection.localDescription
+            });
+        })
+        .catch(error => console.error("Error creating answer:", error));
+});
+
+// c) ANSWER प्राप्त करें (हमारे ऑफर का जवाब)
+socket.on('webrtc_answer', (data) => {
+    const pc = remoteConnections[data.sender];
+    if (pc) {
+        pc.setRemoteDescription(new RTCSessionDescription(data.answer))
+            .catch(error => console.error("Error setting remote answer:", error));
+    }
+});
+
+// d) ICE CANDIDATE प्राप्त करें
+socket.on('webrtc_ice_candidate', (data) => {
+    const pc = remoteConnections[data.sender];
+    if (pc && data.candidate) {
+        pc.addIceCandidate(new RTCIceCandidate(data.candidate))
+            .catch(error => console.error("Error adding ICE candidate:", error));
+    }
+});
 
 
-// यह फ़ंक्शन index.html में handleLogin() के सफल होने के बाद कॉल किया जाता है।
+// --- Initialization Function (Called from index.html after successful login) ---
 window.initVoiceChat = async () => {
-    await startLocalStream();
-    // यदि आप Host हैं, तो आप रूम में अन्य सभी को कॉल करना शुरू कर सकते हैं।
+    if (!localStream) {
+        await startLocalStream();
+    }
+    // Room में मौजूद यूज़र्स के साथ कनेक्शन शुरू करने का काम Socket.io handlers संभालेंगे
 };
-        
+
+// --- Gifting Real-time Logic (Animation) ---
+socket.on('gift_received_animation', (data) => {
+    const notificationArea = document.getElementById('notification-area');
+    const msg = `${data.sender} sent a gift of ${data.amount} Diamonds to ${data.receiver}! Level up: ${data.leveledUp ? 'YES' : 'No'}`;
+    
+    // यहाँ आप GIF Animation चला सकते हैं
+    const giftAnimation = document.getElementById('gift-animation-container');
+    if(giftAnimation) {
+        giftAnimation.textContent = `*** GRAND GIFT ANIMATION: ${data.amount} ***`;
+        setTimeout(() => giftAnimation.textContent = '', 3000); // 3 सेकंड बाद हटा दें
+    }
+
+    const notification = document.createElement('div');
+    notification.textContent = msg;
+    notificationArea.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+});
+            
