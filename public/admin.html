@@ -8,12 +8,13 @@
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
         .dashboard-container { max-width: 1200px; margin: auto; }
         h1 { color: #5c677d; border-bottom: 2px solid #ff69b4; padding-bottom: 10px; }
+        h2 { color: #ff69b4; margin-top: 0; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #ff69b4; color: white; }
-        .metric { background: #e0f7fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
-        /* Add other styles for Top Users and Transactions as needed */
+        .metric { background: #e0f7fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
+        #loading-message { text-align: center; color: #5c677d; }
     </style>
 </head>
 <body>
@@ -21,9 +22,11 @@
 <div class="dashboard-container">
     <h1>Couple Voice Chat - Admin Dashboard</h1>
     
+    <div id="loading-message">Loading data...</div>
+
     <div class="section">
         <h2>Key Metrics</h2>
-        <div class="metric">Total Registered Users: <strong id="totalUsers">...</strong></div>
+        <div class="metric">Total Registered Users: <span id="totalUsers">...</span></div>
     </div>
 
     <div class="section">
@@ -37,7 +40,7 @@
     <div class="section">
         <h2>Recent Diamond Purchases (Transactions)</h2>
         <table id="transactionsTable">
-            <thead><tr><th>User</th><th>Amount (Diamonds)</th><th>UTR</th><th>Status</th></tr></thead>
+            <thead><tr><th>User</th><th>Amount (Diamonds)</th><th>Status</th><th>Date</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -45,15 +48,19 @@
 
 <script>
     const ADMIN_API = '/api/admin/dashboard-data';
+    const loadingMessage = document.getElementById('loading-message');
 
     async function fetchAdminData() {
+        loadingMessage.textContent = 'Fetching data from server...';
         try {
             const response = await fetch(ADMIN_API);
             const data = await response.json();
 
+            loadingMessage.style.display = 'none';
+
             if (response.ok && data.success) {
                 // 1. Metrics
-                document.getElementById('totalUsers').textContent = data.totalUsers;
+                document.getElementById('totalUsers').textContent = data.totalUsers.toLocaleString();
 
                 // 2. Top Users
                 const userBody = document.getElementById('topUsersTable').querySelector('tbody');
@@ -68,19 +75,27 @@
                 // 3. Transactions
                 const transBody = document.getElementById('transactionsTable').querySelector('tbody');
                 transBody.innerHTML = '';
-                data.recentTransactions.forEach(trans => {
+                if (data.recentTransactions && data.recentTransactions.length > 0) {
+                    data.recentTransactions.forEach(trans => {
+                        const row = transBody.insertRow();
+                        row.insertCell(0).textContent = trans.username;
+                        row.insertCell(1).textContent = trans.diamondAmount.toLocaleString();
+                        row.insertCell(2).textContent = trans.status || 'N/A';
+                        row.insertCell(3).textContent = new Date(trans.createdAt).toLocaleDateString();
+                    });
+                } else {
                     const row = transBody.insertRow();
-                    row.insertCell(0).textContent = trans.username;
-                    row.insertCell(1).textContent = trans.diamondAmount.toLocaleString();
-                    row.insertCell(2).textContent = trans.utrNumber;
-                    row.insertCell(3).textContent = trans.status;
-                });
+                    row.insertCell(0).setAttribute('colspan', '4');
+                    row.insertCell(0).textContent = 'No recent transactions found.';
+                }
 
             } else {
-                alert(`Error loading admin data: ${data.message}`);
+                loadingMessage.style.display = 'block';
+                loadingMessage.textContent = `Error loading admin data: ${data.message || 'Unknown API error'}`;
             }
         } catch (error) {
-            alert(`Network Error: Could not reach Admin API. ${error.message}`);
+            loadingMessage.style.display = 'block';
+            loadingMessage.textContent = `NETWORK ERROR: Could not connect to Admin API. Check server status. ${error.message}`;
         }
     }
 
@@ -88,5 +103,4 @@
 </script>
 
 </body>
-  </html>
-  
+</html>
