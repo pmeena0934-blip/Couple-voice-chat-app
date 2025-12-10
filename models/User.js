@@ -1,8 +1,9 @@
-// models/User.js (Complete File)
+// models/User.js (Complete and Corrected File)
 
 const mongoose = require('mongoose');
 
-const UserSchema = new mongoose.Schema({
+// **महत्वपूर्ण सुधार**: स्कीमा का नाम lowercase 'userSchema' है।
+const userSchema = new mongoose.Schema({ 
     username: { 
         type: String, 
         required: true, 
@@ -36,6 +37,8 @@ const UserSchema = new mongoose.Schema({
     },
 });
 
-const User = mongoose.model('User', UserSchema);
+// Mongoose Model बनाना
+const User = mongoose.model('User', userSchema);
 
+// मॉडल को export करना
 module.exports = User;
