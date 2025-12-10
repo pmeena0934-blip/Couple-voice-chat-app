@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Couple Voice Chat App</title>
+    
     <link rel="stylesheet" href="style.css"> 
+    
+    <link rel="stylesheet" href="login-modal.css"> 
+    
     <style>
         /* CSS for the Login Modal (Added for initial display) */
         body {
@@ -14,8 +18,10 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            /* Login के समय background-color: #f4f4f9; */
             background-color: #f4f4f9;
         }
+        /* Login Modal की स्टाइलिंग अब login-modal.css से आनी चाहिए, लेकिन यह inline CSS भी काम करेगा */
         .login-modal {
             background-color: #fff;
             padding: 30px;
@@ -34,6 +40,9 @@
             width: 100%;
             height: 100%;
             background-color: #1a1a2e; /* Dark background color of Love Cafe UI */
+            /* Flexbox डिस्प्ले जो showAppUI() में सेट है, उसे यहाँ भी रखें */
+            justify-content: center; 
+            align-items: center;
         }
     </style>
 </head>
@@ -91,7 +100,7 @@
         // --- Login/Authentication Logic ---
         function showAppUI(user) {
             loginModal.style.display = 'none';
-            appUi.style.display = 'flex'; // UI को Flexbox के साथ दिखाएँ
+            appUi.style.display = 'flex'; // UI को Flexbox के साथ दिखाएँ (पूरा स्क्रीन कवर करने के लिए)
             userInfoDisplay.textContent = `User: ${user.username} | Diamonds: ${user.diamonds}`;
             
             // Socket.io कनेक्शन लॉजिक
@@ -191,5 +200,4 @@
 
     </script>
 </body>
-    </html>
-    
+</html>
