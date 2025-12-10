@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couple Voice Chat App - Login</title>
+    <style>
+        /* Basic CSS for centering the modal */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f9;
+        }
+        .login-modal {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+        .login-modal h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .login-modal input[type="text"] {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .login-modal button {
+            width: 100%;
+            padding: 10px;
+            background-color: #ff69b4; /* Pink */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .login-modal button:hover {
+            background-color: #e55a9d;
+        }
+        #user-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        /* Hide the main app UI initially */
+        #app-ui {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="user-info"></div>
+
+    <div class="login-modal" id="login-modal">
+        <h2>Welcome to the App</h2>
+        <input type="text" id="username-input" placeholder="Enter Your Username">
+        <button onclick="handleLogin()">Login / Register</button>
+    </div>
+
+    <div id="app-ui">
+        <h1>Welcome to the Chat Room!</h1>
+        <p>You are successfully logged in. Your chat room UI would go here.</p>
+        </div>
+
+    <script>
+        const loginModal = document.getElementById('login-modal');
+        const usernameInput = document.getElementById('username-input');
+        const userInfoDisplay = document.getElementById('user-info');
+        const appUi = document.getElementById('app-ui');
+        
+        // चेक करें कि यूज़र पहले से लॉगिन है या नहीं
+        if (localStorage.getItem('token')) {
+            // अगर token है, तो सीधे ऐप UI दिखाएँ
+            loginModal.style.display = 'none';
+            appUi.style.display = 'block';
+            userInfoDisplay.textContent = `User: ${localStorage.getItem('username')} | Diamonds: ${localStorage.getItem('diamonds')}`;
+            // यहां Socket.io कनेक्शन लॉजिक शुरू होगा
+        }
+
+        async function handleLogin() {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                alert('Please enter a username.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    
+                    // यूज़र डेटा localStorage में सेव करें
+                    localStorage.setItem('token', 'loggedIn'); // Dummy token
+                    localStorage.setItem('username', data.user.username);
+                    localStorage.setItem('diamonds', data.user.diamonds);
+                    
+                    // UI अपडेट करें
+                    loginModal.style.display = 'none';
+                    appUi.style.display = 'block';
+                    userInfoDisplay.textContent = `User: ${data.user.username} | Diamonds: ${data.user.diamonds}`;
+                    
+                    // यहां से आप Socket.io कनेक्शन शुरू कर सकते हैं
+                    // window.location.reload(); // या आप पेज को रीलोड भी कर सकते हैं
+                } else {
+                    alert('Login/Registration Failed: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Network Error:', error);
+                alert('An error occurred during login. Check server connection.');
+            }
+        }
+    </script>
+</body>
+</html>
