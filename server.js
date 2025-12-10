@@ -1,4 +1,4 @@
-// server.js (Complete File - FINAL PRODUCTION CODE with ALL features)
+// server.js (FINAL, COMPLETE, AND INTEGRATED CODE)
 
 const express = require('express');
 const http = require('http');
@@ -6,18 +6,18 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-const multer = require('multer'); // <--- FILE UPLOAD के लिए
-const fs = require('fs');         // <--- FILE DELETE करने के लिए (screenshot cleanup)
+const multer = require('multer'); 
+const fs = require('fs');         
 
 // --- Import Models (CRITICAL: Ensure these models exist in models/ folder) ---
+// **NOTE: If you haven't created these models yet, you MUST create them.**
 const User = require('./models/User'); 
 const Transaction = require('./models/Transaction'); 
-const Gift = require('./models/Gift'); // Assuming you have a Gift model if needed for stats
 const Room = require('./models/Room'); 
-const RechargeRequest = require('./models/RechargeRequest'); // <--- Recharge Model Import
+const RechargeRequest = require('./models/RechargeRequest'); 
 
 // --- Import Utilities ---
-const { calculateNewLevel } = require('./utils/leveling'); // For user/room leveling
+const { calculateNewLevel } = require('./utils/leveling'); 
 
 // --- App Setup ---
 const app = express();
@@ -30,7 +30,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// **CRITICAL:** Serve static files correctly from the 'public' directory
+// **CRITICAL:** Serve static files and uploaded files
 app.use(express.static(path.join(__dirname, 'public'))); 
 
 const server = http.createServer(app);
@@ -52,31 +52,32 @@ mongoose.connect(MONGODB_URI)
     process.exit(1); 
   });
 
-// **Multer Storage Configuration (IMPORTANT: यह सुनिश्चित करता है कि screenshot सेव हो)**
+// **Multer Storage Configuration for Recharge Screenshots and Profile Pics**
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, UPLOADS_DIR);
     },
     filename: (req, file, cb) => {
-        // File name: type-username-timestamp-ext.jpg
         const type = file.fieldname.includes('profile') ? 'profile' : 'recharge';
         const ext = path.extname(file.originalname);
-        // Ensure you use a field name that exists in the request body
         cb(null, `${type}-${req.body.username || req.body.currentUsername || 'unknown'}-${Date.now()}${ext}`);
     }
 });
-const upload = multer({ storage: storage }); // <--- Multer instance for uploads
+const upload = multer({ storage: storage }); 
+
+// --- Active Room States (In-memory store for Socket.io) ---
+const activeRooms = {}; 
+const MAX_SIT_SLOTS = 15; 
 
 // --- API Routes ---
 
-// ********** LOGIN/REGISTRATION API ROUTE **********
+// ********** 1. LOGIN/REGISTRATION API **********
 app.post('/api/login', async (req, res) => {
     const { username } = req.body;
     try {
         let user = await User.findOne({ username });
         if (!user) {
-            // New user gets 500 default diamonds (as requested)
-            user = new User({ username, diamonds: 500, level: 0 }); 
+            user = new User({ username, diamonds: 500, level: 0, coins: 0 }); 
             await user.save();
             return res.json({ success: true, message: 'Registration successful! 500 💎 credited.', user });
         } else {
@@ -89,7 +90,19 @@ app.post('/api/login', async (req, res) => {
 });
 // *********************************************************
 
-// ********** ROOM CREATION API **********
+// ********** 2. GET ALL ROOMS API **********
+app.get('/api/rooms', async (req, res) => {
+    try {
+        const rooms = await Room.find().sort({ createdAt: -1 }); 
+        res.json({ success: true, rooms });
+    } catch (error) {
+        console.error('Get Rooms Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while fetching rooms.' });
+    }
+});
+// ***************************************
+
+// ********** 3. ROOM CREATION API **********
 app.post('/api/room/create', async (req, res) => {
     const { username, roomName, isVIP } = req.body;
     const VIP_COST_DIAMONDS = 200; 
@@ -156,141 +169,50 @@ app.post('/api/room/create', async (req, res) => {
 });
 // *************************************************
 
-// ********** GET ALL ROOMS API **********
-app.get('/api/rooms', async (req, res) => {
-    try {
-        const rooms = await Room.find().sort({ createdAt: -1 }); 
-        res.json({ success: true, rooms });
-    } catch (error) {
-        console.error('Get Rooms Error:', error);
-        res.status(500).json({ success: false, message: 'Server error while fetching rooms.' });
-    }
-});
-// ***************************************
-
-// ********** RECHARGE REQUEST API (Client Submission) **********
-app.post('/api/recharge/request', upload.single('screenshot'), async (req, res) => {
-    // upload.single('screenshot') handles the file upload and saves it to the configured path
-    const { username, paidAmount, diamondAmount, utrNumber } = req.body;
+// ********** 4. USER PROFILE UPDATE API **********
+app.post('/api/user/profile/update', upload.single('profilePic'), async (req, res) => {
+    const { currentUsername, newUsername } = req.body;
+    const newImagePath = req.file ? `/uploads/${req.file.filename}` : null;
     
-    // Screenshot file is stored in public/uploads/
-    const screenshotUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    if (!username || !utrNumber || !screenshotUrl || !paidAmount || !diamondAmount) {
-        if (req.file) fs.unlinkSync(req.file.path); // Clean up uploaded file if submission fails
-        return res.status(400).json({ success: false, message: 'Missing required fields (UTR or Screenshot).' });
-    }
-
     try {
-        const existingRequest = await RechargeRequest.findOne({ utrNumber: utrNumber, status: 'pending' });
-        if (existingRequest) {
-            if (req.file) fs.unlinkSync(req.file.path);
-            return res.status(400).json({ success: false, message: 'A pending request with this UTR number already exists.' });
+        const updateFields = {};
+        
+        // 1. Check/Update Username
+        if (newUsername && newUsername !== currentUsername) {
+            const existingUser = await User.findOne({ username: newUsername });
+            if (existingUser) {
+                 if (newImagePath && req.file) fs.unlinkSync(req.file.path);
+                 return res.status(400).json({ success: false, message: 'Username already taken.' });
+            }
+            updateFields.username = newUsername;
         }
 
-        const newRequest = new RechargeRequest({
-            username,
-            paidAmount: parseFloat(paidAmount),
-            diamondAmount: parseInt(diamondAmount),
-            utrNumber,
-            screenshotUrl,
-            status: 'pending'
-        });
+        // 2. Update Profile Picture
+        if (newImagePath) {
+            updateFields.profilePic = newImagePath;
+        }
 
-        await newRequest.save();
-        res.json({ success: true, message: 'Recharge request submitted for verification.' });
+        const updatedUser = await User.findOneAndUpdate(
+            { username: currentUsername },
+            { $set: updateFields },
+            { new: true }
+        );
+        
+        if (!updatedUser) {
+             if (newImagePath && req.file) fs.unlinkSync(req.file.path);
+             return res.status(404).json({ success: false, message: 'Original user not found.' });
+        }
+
+        res.json({ success: true, message: 'Profile updated successfully.', user: updatedUser });
 
     } catch (error) {
-        console.error('Recharge Request Error:', error);
-        if (req.file) fs.unlinkSync(req.file.path);
-        res.status(500).json({ success: false, message: 'Server error during submission.' });
+        console.error('Profile Update Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during profile update.' });
     }
 });
 // ************************************************************
 
-// ********** ADMIN: GET PENDING RECHARGE REQUESTS **********
-app.get('/api/admin/recharge/requests', async (req, res) => {
-    try {
-        const statusFilter = req.query.status || 'pending';
-        const requests = await RechargeRequest.find({ status: statusFilter }).sort({ createdAt: 1 });
-        res.json({ success: true, requests });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error fetching requests.' });
-    }
-});
-// **********************************************************
-
-// ********** ADMIN: RECHARGE ACTION (ACCEPT/REJECT) **********
-app.post('/api/admin/recharge/action', async (req, res) => {
-    const { requestId, action, adminUsername } = req.body;
-    
-    if (action !== 'accepted' && action !== 'rejected') {
-        return res.status(400).json({ success: false, message: 'Invalid action.' });
-    }
-
-    const session = await mongoose.startSession();
-    session.startTransaction(); // Atomic Transaction starts here
-
-    try {
-        const request = await RechargeRequest.findById(requestId).session(session);
-
-        if (!request || request.status !== 'pending') {
-            await session.abortTransaction(); session.endSession();
-            return res.status(400).json({ success: false, message: 'Request not found or already processed.' });
-        }
-        
-        // 1. Update Request Status
-        request.status = action;
-        request.adminActionBy = adminUsername;
-        request.updatedAt = Date.now();
-        await request.save({ session });
-
-        let successMessage = `Request rejected for user ${request.username}.`;
-        
-        if (action === 'accepted') {
-            const diamondAmount = request.diamondAmount;
-            
-            // 2. Add diamonds to the user's wallet
-            const user = await User.findOneAndUpdate(
-                { username: request.username },
-                { $inc: { diamonds: diamondAmount } },
-                { new: true, session }
-            );
-
-            // 3. Log the transaction
-            await new Transaction({
-                username: request.username,
-                type: 'recharge_credit',
-                amount: diamondAmount, 
-                details: `Recharge accepted by ${adminUsername}. Credited ${diamondAmount} 💎`
-            }).save({ session });
-            
-            successMessage = `Accepted! ${diamondAmount} 💎 credited to ${request.username}. New Balance: ${user.diamonds}`;
-        }
-        
-        // 4. Remove screenshot file after processing (Cleanup)
-        if (request.screenshotUrl) {
-            const filePath = path.join(__dirname, 'public', request.screenshotUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-
-        await session.commitTransaction(); // Transaction success!
-        session.endSession();
-        
-        res.json({ success: true, message: successMessage });
-
-    } catch (error) {
-        await session.abortTransaction(); // Rollback changes if any step failed
-        session.endSession();
-        console.error('Recharge Action Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during transaction process.' });
-    }
-});
-// **************************************************************
-
-// ********** COIN TO DIAMOND EXCHANGE **********
+// ********** 5. COIN TO DIAMOND EXCHANGE **********
 app.post('/api/exchange/coin-to-diamond', async (req, res) => {
     const { username } = req.body;
     const COINS_PER_DIAMOND = 10; 
@@ -345,105 +267,259 @@ app.post('/api/exchange/coin-to-diamond', async (req, res) => {
 });
 // ************************************************************
 
-// ********** USER PROFILE UPDATE API **********
-app.post('/api/user/profile/update', upload.single('profilePic'), async (req, res) => {
-    const { currentUsername, newUsername } = req.body;
-    const newImagePath = req.file ? `/uploads/${req.file.filename}` : null;
-    
+// ********** 6. RECHARGE REQUEST API (Client Submission) **********
+app.post('/api/recharge/request', upload.single('screenshot'), async (req, res) => {
+    const { username, paidAmount, diamondAmount, utrNumber } = req.body;
+    const screenshotUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (!username || !utrNumber || !screenshotUrl || !paidAmount || !diamondAmount) {
+        if (req.file) fs.unlinkSync(req.file.path); 
+        return res.status(400).json({ success: false, message: 'Missing required fields (UTR or Screenshot).' });
+    }
+
     try {
-        const updateFields = {};
-        
-        // 1. Check/Update Username
-        if (newUsername && newUsername !== currentUsername) {
-            const existingUser = await User.findOne({ username: newUsername });
-            if (existingUser) {
-                 if (newImagePath && req.file) fs.unlinkSync(req.file.path);
-                 return res.status(400).json({ success: false, message: 'Username already taken.' });
-            }
-            updateFields.username = newUsername;
+        const existingRequest = await RechargeRequest.findOne({ utrNumber: utrNumber, status: 'pending' });
+        if (existingRequest) {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(400).json({ success: false, message: 'A pending request with this UTR number already exists.' });
         }
 
-        // 2. Update Profile Picture
-        if (newImagePath) {
-            updateFields.profilePic = newImagePath;
-        }
+        const newRequest = new RechargeRequest({
+            username,
+            paidAmount: parseFloat(paidAmount),
+            diamondAmount: parseInt(diamondAmount),
+            utrNumber,
+            screenshotUrl,
+            status: 'pending'
+        });
 
-        const updatedUser = await User.findOneAndUpdate(
-            { username: currentUsername },
-            { $set: updateFields },
-            { new: true }
-        );
-        
-        if (!updatedUser) {
-             if (newImagePath && req.file) fs.unlinkSync(req.file.path);
-             return res.status(404).json({ success: false, message: 'Original user not found.' });
-        }
-
-        res.json({ success: true, message: 'Profile updated successfully.', user: updatedUser });
+        await newRequest.save();
+        res.json({ success: true, message: 'Recharge request submitted for verification.' });
 
     } catch (error) {
-        console.error('Profile Update Error:', error);
-        res.status(500).json({ success: false, message: 'Server error during profile update.' });
+        console.error('Recharge Request Error:', error);
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(500).json({ success: false, message: 'Server error during submission.' });
     }
 });
 // ************************************************************
 
+// ********** 7. ADMIN: GET PENDING RECHARGE REQUESTS **********
+app.get('/api/admin/recharge/requests', async (req, res) => {
+    try {
+        const statusFilter = req.query.status || 'pending';
+        const requests = await RechargeRequest.find({ status: statusFilter }).sort({ createdAt: 1 });
+        res.json({ success: true, requests });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error fetching requests.' });
+    }
+});
+// **********************************************************
 
-// --- Socket.io Logic (Gifting, Mic Slots) ---
-// ... (The complete Socket.io logic from the previous detailed response remains here)
-// Due to size limits, I am only showing the API part, but assume the socket logic is combined below this line in your single file structure.
+// ********** 8. ADMIN: RECHARGE ACTION (ACCEPT/REJECT) **********
+app.post('/api/admin/recharge/action', async (req, res) => {
+    const { requestId, action, adminUsername } = req.body;
+    
+    if (action !== 'accepted' && action !== 'rejected') {
+        return res.status(400).json({ success: false, message: 'Invalid action.' });
+    }
 
-// --- Active Room States (In-memory store) ---
-const activeRooms = {}; 
-const MAX_SIT_SLOTS = 15; 
-const OFFICIAL_ROOM_MAX_SLOTS = 50; 
+    const session = await mongoose.startSession();
+    session.startTransaction(); 
+
+    try {
+        const request = await RechargeRequest.findById(requestId).session(session);
+
+        if (!request || request.status !== 'pending') {
+            await session.abortTransaction(); session.endSession();
+            return res.status(400).json({ success: false, message: 'Request not found or already processed.' });
+        }
+        
+        // 1. Update Request Status
+        request.status = action;
+        request.adminActionBy = adminUsername;
+        request.updatedAt = Date.now();
+        await request.save({ session });
+
+        let successMessage = `Request rejected for user ${request.username}.`;
+        
+        if (action === 'accepted') {
+            const diamondAmount = request.diamondAmount;
+            
+            // 2. Add diamonds to the user's wallet
+            const user = await User.findOneAndUpdate(
+                { username: request.username },
+                { $inc: { diamonds: diamondAmount } },
+                { new: true, session }
+            );
+
+            // 3. Log the transaction
+            await new Transaction({
+                username: request.username,
+                type: 'recharge_credit',
+                amount: diamondAmount, 
+                details: `Recharge accepted by ${adminUsername}. Credited ${diamondAmount} 💎`
+            }).save({ session });
+            
+            successMessage = `Accepted! ${diamondAmount} 💎 credited to ${request.username}. New Balance: ${user.diamonds}`;
+        }
+        
+        // 4. Remove screenshot file after processing (Cleanup)
+        if (request.screenshotUrl) {
+            const filePath = path.join(__dirname, 'public', request.screenshotUrl);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await session.commitTransaction(); 
+        session.endSession();
+        
+        res.json({ success: true, message: successMessage });
+
+    } catch (error) {
+        await session.abortTransaction(); 
+        session.endSession();
+        console.error('Recharge Action Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during transaction process.' });
+    }
+});
+// **************************************************************
+
+
+// --- Socket.io Logic (Gifting, Mic Slots, Chat) ---
 
 io.on('connection', (socket) => {
     
     // --- 1. Join Room ---
-    socket.on('joinRoom', async ({ roomId, username }) => { /* ... Join Room Logic ... */ });
+    socket.on('joinRoom', async ({ roomId, username }) => { 
+        socket.join(roomId);
+        
+        try {
+            const room = await Room.findOne({ roomId });
+            if (!room) {
+                socket.emit('systemMessage', { text: 'Error: Room not found.' });
+                return;
+            }
+            
+            if (!activeRooms[roomId]) {
+                activeRooms[roomId] = {
+                    info: room,
+                    micSlots: {}, // Key: slot number, Value: { username, avatar }
+                    users: {} // Key: username, Value: socketId
+                };
+            }
+            
+            activeRooms[roomId].users[username] = socket.id;
 
-    // --- 2. Handle Chat Messages ---
-    socket.on('sendMessage', ({ roomId, username, text }) => { /* ... Send Message Logic ... */ });
+            // Initialize Mic Slot 1 (Owner)
+            if (!activeRooms[roomId].micSlots[1]) {
+                const owner = await User.findOne({ username: room.ownerUsername });
+                if (owner) {
+                    activeRooms[roomId].micSlots[1] = {
+                        username: room.ownerUsername,
+                        avatar: owner.profilePic || 'https://i.pravatar.cc/150?img=1'
+                    };
+                }
+            }
+            
+            // Send initial room state to the joining user
+            socket.emit('roomInfo', {
+                name: room.name,
+                roomLevel: room.roomLevel,
+                ownerUsername: room.ownerUsername,
+                ownerProfilePic: room.ownerProfilePic
+            });
+            socket.emit('initialMicState', activeRooms[roomId].micSlots);
+            
+            // Notify others
+            io.to(roomId).emit('message', { type: 'system', username: 'System', text: `${username} has joined the room.` });
 
-    // --- 3. Handle Gifts (Gifting, Coins, and Leveling) ---
-    socket.on('sendGift', async ({ roomId, username, giftName, diamondCost, quantity }) => { 
-        /* ... Complete Secured Gifting Logic ... */ 
+        } catch (error) {
+            console.error('Join Room Error:', error);
+        }
     });
 
-    // --- 4. Mic Slot Request (Sit Logic) ---
-    socket.on('requestMic', async ({ roomId, slot, username }) => { /* ... Mic Request Logic ... */ });
-    
-    // --- 5. Disconnect Logic (IMPORTANT) ---
-    socket.on('disconnect', () => { /* ... Disconnect and Mic Release Logic ... */ });
-});
+    // --- 2. Handle Chat Messages ---
+    socket.on('sendMessage', ({ roomId, username, text }) => { 
+        io.to(roomId).emit('message', { type: 'chat', username, text });
+    });
 
+    // --- 3. Mic Slot Request (Sit Logic) ---
+    socket.on('requestMic', async ({ roomId, slot, username }) => { 
+        const roomState = activeRooms[roomId];
+        if (!roomState) return;
 
-// ********** STATICS AND WILDCARD ROUTE **********
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+        try {
+            const user = await User.findOne({ username });
+            if (!user) return;
 
-// Admin Route to access the admin panel securely 
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+            if (slot === 1 && username !== roomState.info.ownerUsername) {
+                // Only owner can be on slot 1
+                socket.emit('message', { type: 'system', text: 'Mic #1 is reserved for the room owner.' });
+                return;
+            }
 
-app.get('/admin/recharge-requests.html', (req, res) => {
-     res.sendFile(path.join(__dirname, 'public', 'admin', 'recharge-requests.html'));
-});
+            if (roomState.micSlots[slot]) {
+                socket.emit('message', { type: 'system', text: `Mic #${slot} is already occupied.` });
+                return;
+            }
+            
+            // Clear user from any previous mic slot
+            for (const key in roomState.micSlots) {
+                if (roomState.micSlots[key].username === username) {
+                    delete roomState.micSlots[key];
+                    io.to(roomId).emit('micUpdate', { slot: key, user: null, avatar: null });
+                    break;
+                }
+            }
 
-app.get('/*.html', (req, res) => {
-    // This serves rooms.html, room.html, recharge.html, profile.html
-    res.sendFile(path.join(__dirname, 'public', req.path));
-});
+            // Occupy the new slot
+            roomState.micSlots[slot] = {
+                username: username,
+                avatar: user.profilePic || 'https://i.pravatar.cc/150?img=1'
+            };
 
-// Catch-all 404 handler
-app.get('*', (req, res) => {
-    res.status(404).send('File not found or API error.');
-});
-// ****************************************************************************
+            // Broadcast the update
+            io.to(roomId).emit('micUpdate', { 
+                slot: slot, 
+                user: username, 
+                avatar: roomState.micSlots[slot].avatar 
+            });
+            io.to(roomId).emit('message', { type: 'system', text: `${username} sat on Mic #${slot}.` });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
-                  
+        } catch (error) {
+            console.error('Request Mic Error:', error);
+        }
+    });
+
+    // --- 4. Handle Gifts (Gifting, Coins, and Leveling) ---
+    socket.on('sendGift', async ({ roomId, username, giftName, diamondCost, quantity }) => { 
+        const roomState = activeRooms[roomId];
+        if (!roomState) return;
+        const totalCost = diamondCost * quantity;
+        
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            const user = await User.findOne({ username }).session(session);
+            const room = await Room.findOne({ roomId }).session(session);
+
+            if (!user || user.diamonds < totalCost || !room) {
+                await session.abortTransaction(); session.endSession();
+                socket.emit('message', { type: 'system', text: 'Transaction failed: Insufficient diamonds or invalid room/user.' });
+                return;
+            }
+
+            // 1. Deduct diamonds from sender
+            user.diamonds -= totalCost;
+            await user.save({ session });
+
+            // 2. Credit coins to room owner
+            const owner = await User.findOne({ username: room.ownerUsername }).session(session);
+            const coinsToCredit = totalCost * 0.5; // Example: Owner gets 50% of diamond value as coins
+            owner.coins += coinsToCredit;
+            
+            // 3. Update owner level (Example: 1 XP per diamond spent)
+            owner.experience += totalCost;
