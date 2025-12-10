@@ -27,9 +27,9 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 // --- Database Connection ---
-// ********** MONGODB_URI यहाँ ठीक कर दिया गया है **********
+// ********** यह लाइन अब 100% सही है **********
 const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app';
-// ********************************************************
+// **********************************************
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Atlas Connected'))
@@ -99,4 +99,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
-  
