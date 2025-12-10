@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Couple Voice Chat App</title>
     
+    <link rel="manifest" href="/manifest.json"> 
+    <meta name="theme-color" content="#ff69b4">
+    <link rel="apple-touch-icon" href="/images/app-icon-192.png">
+    
     <link rel="stylesheet" href="style.css"> 
     <link rel="stylesheet" href="login-modal.css"> 
     
@@ -87,6 +91,31 @@
         @keyframes slideDown {
             from { top: -50px; opacity: 0; }
             to { top: 10px; opacity: 1; }
+        }
+        
+        /* NEW: Entry Effect Styles (Car/Plane) */
+        .entry-effect-car {
+            position: fixed;
+            bottom: -150px; /* Start off screen */
+            left: 0;
+            width: 150px; 
+            height: 100px;
+            background-image: url('/images/car-icon.png'); /* You must upload this image */
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 2000;
+            animation: driveAcross 5s linear forwards;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        @keyframes driveAcross {
+            0% { left: -150px; bottom: 50px; }
+            100% { left: calc(100% + 150px); bottom: 50px; }
         }
     </style>
 </head>
@@ -193,12 +222,16 @@
 
             <div class="footer-controls">
                 <button class="btn" onclick="sendChatMessage()">💬 Chat</button>
-                <button class="btn gift-btn" onclick="showGiftStore()">🎁 Gift Store</button> <button class="btn" onclick="showBuyModal()">💰 Buy Diamonds</button>
+                <button class="btn gift-btn" onclick="showGiftStore()">🎁 Gift Store</button> 
+                <button class="btn" onclick="showBuyModal()">💰 Buy Diamonds</button>
                 <button class="btn" onclick="showEditModal()">⚙️ Edit Profile</button>
-                <button class="btn" onclick="showCreateRoomModal()">🏡 Create Room</button> </div>
+                <button class="btn" onclick="showCreateRoomModal()">🏡 Create Room</button> 
+            </div>
 
             <div id="notification-area"></div>
             <div id="gift-animation-container"></div>
+            
+            <div id="entry-effect-container"></div> 
         </div>
     </div>
     
@@ -213,11 +246,12 @@
         const appUi = document.getElementById('app-ui');
         const editModal = document.getElementById('edit-modal');
         const buyModal = document.getElementById('buy-modal');
-        const giftStoreModal = document.getElementById('gift-store-modal'); // New
-        const createRoomModal = document.getElementById('create-room-modal'); // New
-        const globalAnnouncementBar = document.getElementById('global-announcement-bar'); // New
-        
-        let availableGifts = []; // To store gifts from the API
+        const giftStoreModal = document.getElementById('gift-store-modal'); 
+        const createRoomModal = document.getElementById('create-room-modal'); 
+        const globalAnnouncementBar = document.getElementById('global-announcement-bar'); 
+        const entryEffectContainer = document.getElementById('entry-effect-container');
+
+        let availableGifts = []; 
         
         // --- Utility Functions ---
         function getStoredUser() {
@@ -240,10 +274,34 @@
             globalAnnouncementBar.style.display = 'block';
             setTimeout(() => {
                 globalAnnouncementBar.style.display = 'none';
-            }, 8000); // Display for 8 seconds
+            }, 8000); 
         }
 
-        // --- Fetch Gifts ---
+        // --- PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+        
+        // --- Entry Effect Logic ---
+        function showEntryEffect(username, effectType = 'car') {
+            const effectDiv = document.createElement('div');
+            effectDiv.className = `entry-effect-${effectType}`;
+            effectDiv.innerHTML = `Welcome: ${username}`;
+            entryEffectContainer.appendChild(effectDiv);
+
+            // Remove the effect after the animation ends (5 seconds)
+            setTimeout(() => {
+                entryEffectContainer.removeChild(effectDiv);
+            }, 5000);
+        }
+        
+        // --- Fetch Gifts and Populate Store ---
         async function fetchGifts() {
             try {
                 const response = await fetch('/api/gifts');
@@ -280,7 +338,7 @@
             appUi.style.display = 'flex'; 
             
             updateHostUI(user);
-            fetchGifts(); // Load gifts immediately after login
+            fetchGifts(); 
             
             const socket = io(); 
             window.socket = socket; 
@@ -291,9 +349,19 @@
                 socket.emit('join_room', { roomId, userId: user.username }); 
             });
             
-            // New Socket Listener for Super Gift Announcement
             socket.on('global_announcement', (data) => {
                 showAnnouncement(data.message);
+            });
+            
+            // Listen for a gift animation trigger
+            socket.on('gift_received_animation', (data) => {
+                 // Trigger entry effect if the gift has one (e.g., 10,00,000 Diamond 'Golden Dragon')
+                 if (data.entryEffect) { 
+                     showEntryEffect(data.sender, data.entryEffect);
+                 }
+                // (Normal gift animation logic goes here, e.g., showing a heart burst)
+                // For demo, we alert for the gift:
+                // alert(`${data.sender} sent ${data.giftName} to ${data.receiver}!`);
             });
             
             if (typeof window.setupSocketListeners === 'function') {
@@ -394,69 +462,4 @@
             const utrNumber = document.getElementById('buy-utr').value.trim();
             const screenshotUrl = document.getElementById('buy-screenshot-url').value.trim();
 
-            if (!utrNumber || !screenshotUrl) { alert('Please enter UTR and Screenshot URL.'); return; }
-
-            try {
-                const response = await fetch('/api/buy-diamonds', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, utrNumber, screenshotUrl })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert(data.message);
-                    buyModal.style.display = 'none';
-                    document.getElementById('buy-utr').value = ''; 
-                    document.getElementById('buy-screenshot-url').value = '';
-                } else {
-                    alert('Purchase Failed: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Network Error:', error);
-                alert('An error occurred during purchase submission.');
-            }
-        }
-        
-        // --- Gift Store Logic (UPDATED) ---
-        window.showGiftStore = function() {
-            giftStoreModal.style.display = 'block';
-        }
-
-        window.sendGiftFromStore = function(gift) {
-            const currentUsername = localStorage.getItem('username');
-            const receiverId = 'HostAnnie'; // Fixed receiver for demo
-            const amount = gift.diamondCost;
-            
-            // Close store modal
-            giftStoreModal.style.display = 'none';
-            
-            fetch('/api/wallet/gift', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-ID': currentUsername 
-                },
-                body: JSON.stringify({
-                    senderId: currentUsername,
-                    receiverId: receiverId, 
-                    amount: amount
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Sent ${gift.name}! New Diamond Balance: ${data.newBalance}`);
-                    localStorage.setItem('diamonds', data.newBalance);
-                    updateHostUI(getStoredUser()); 
-                    
-                    if (window.socket) {
-                         window.socket.emit('send_gift_realtime', {
-                            sender: currentUsername,
-                            receiver: receiverId,
-                            amount: amount,
-                            giftName: gift.name,
-                            roomId: '101',
-                            isSuperGift: gift.isSuperGift, // Send super gift flag
-           
+            if (!utrNumber || !screenshotUrl) 
