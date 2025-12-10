@@ -7,17 +7,14 @@ const UserSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    // New users get 500 free diamonds
     diamonds: {
         type: Number,
         default: 500, 
     },
-    // Gold coins for smaller transactions (optional)
     coins: {
         type: Number,
         default: 0,
     },
-    // Experience Points / Level System
     level: {
         type: Number,
         default: 1
@@ -26,26 +23,22 @@ const UserSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    
-    // Fields for Profile/Room Editing
     profilePic: {
         type: String,
-        default: 'https://i.pravatar.cc/150?img=3' // Default avatar
+        default: 'https://i.pravatar.cc/150?img=3' 
     },
     roomName: {
         type: String,
         default: 'My Couple Chat Room'
     },
-    // Inventory (e.g., for storing bought frames, cars, etc.)
     inventory: {
-        type: [String], // Array of owned item names/IDs
+        type: [String], 
         default: []
     }
 });
 
 // **--- CRITICAL FIX ---**
-// यदि 'User' मॉडल पहले से मौजूद है (cache में), तो उसे उपयोग करें, अन्यथा नया बनाएं।
-// यह 'User.findOne is not a function' एरर को पूरी तरह से हल करता है।
+// Ensure the model is not recompiled if it already exists in the cache.
 const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 module.exports = User;
