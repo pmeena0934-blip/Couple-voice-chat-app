@@ -1,9 +1,11 @@
-// routes/wallet.js
+// routes/wallet.js (Updated with Leveling Logic)
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User'); 
+// Level Calculator को आयात करें
+const { checkLevelUp } = require('../utils/levelCalculator'); 
 
-// Gifting Logic: Sender's Diamonds decrease, Receiver's Coins increase
+// ********** Gifting API **********
 router.post('/gift', async (req, res) => {
     const senderUsername = req.body.senderId; 
     const { receiverId, amount } = req.body; 
@@ -25,10 +27,23 @@ router.post('/gift', async (req, res) => {
         // --- Transaction ---
         sender.diamonds -= amount;
         
-        // Receiver (Host) के Coins बढ़ाएँ
+        // प्राप्तकर्ता (Receiver) के Coins और XP को बढ़ाएँ
         let receiver = await User.findOne({ username: receiverId });
+        let leveledUp = false;
+
         if (receiver) {
             receiver.coins += amount; 
+            
+            // रिसीवर को XP देना (मान लें 1 डायमंड = 1 XP)
+            const XP_GAIN = amount; 
+            receiver.experiencePoints += XP_GAIN;
+            
+            // लेवल अप चेक करें
+            leveledUp = checkLevelUp(receiver);
+            if (leveledUp) {
+                console.log(`User ${receiver.username} leveled up to ${receiver.level}!`);
+            }
+            
             await receiver.save();
         } 
         
@@ -40,15 +55,18 @@ router.post('/gift', async (req, res) => {
         io.to('101').emit('gift_received', { 
             sender: senderUsername, 
             receiver: receiverId, 
-            amount: amount 
+            amount: amount,
+            leveledUp: leveledUp, // फ्रंटेंड को सूचित करें
+            newReceiverLevel: receiver ? receiver.level : 0
         });
 
-        // 5. सफलता का जवाब 
+        // सफलता का जवाब 
         return res.json({ 
             success: true, 
             message: 'Gift sent successfully!', 
             newBalance: sender.diamonds,
-            newCoins: receiver ? receiver.coins : 0 
+            newCoins: receiver ? receiver.coins : 0,
+            receiverLevel: receiver ? receiver.level : 0
         });
 
     } catch (error) {
@@ -57,10 +75,10 @@ router.post('/gift', async (req, res) => {
     }
 });
 
-// ********** [अगला ज़रूरी API] Coins को Diamonds में बदलना (100 Coins = 10 Diamonds) **********
+// ********** Redemption API (100 Coins = 10 Diamonds) **********
 router.post('/redeem', async (req, res) => {
     const { username, coinAmount } = req.body;
-    const diamondEquivalent = Math.floor(coinAmount / 10); // 100 coins = 10 diamonds
+    const diamondEquivalent = Math.floor(coinAmount / 10); 
     
     if (coinAmount < 100) {
         return res.status(400).json({ success: false, message: 'Minimum 100 coins required for redemption.' });
@@ -81,7 +99,7 @@ router.post('/redeem', async (req, res) => {
         user.diamonds += diamondEquivalent;
         await user.save();
 
-        res.json({ success: true, message: 'Redemption successful!', newDiamonds: user.diamonds });
+        res.json({ success: true, message: 'Redemption successful!', newDiamonds: user.diamonds, newCoins: user.coins });
 
     } catch (error) {
         console.error('Redeem API Error:', error);
