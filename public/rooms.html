@@ -3,45 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Rooms</title>
+    <title>Group Voice Chat - Explore</title>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; margin: 0; background-color: #f4f4f9; padding-top: 50px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        h1 { color: #ff69b4; }
-        p { color: #555; }
-        .user-info { padding: 15px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); width: 80%; max-width: 400px; }
+        body { font-family: 'Arial', sans-serif; background-color: #f0f0ff; margin: 0; padding-top: 50px; }
+        .header { background: linear-gradient(135deg, #a737ff 0%, #ff5c77 100%); color: white; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 1.5em; }
+        .tabs { display: flex; justify-content: space-around; padding: 10px 0; background-color: #f7f7f7; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-button { background: none; border: none; font-size: 1em; color: #555; padding: 5px 15px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-button.active { color: #ff69b4; border-bottom: 2px solid #ff69b4; font-weight: bold; }
+        .room-list-container { padding: 20px; max-width: 600px; margin: auto; }
+        .room-card { background: white; border-radius: 15px; margin-bottom: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; cursor: pointer; border-left: 5px solid #ff69b4; }
+        .room-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .room-name { font-size: 1.2em; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .room-details { display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; color: #777; }
+        .user-count { display: flex; align-items: center; }
+        .user-count img { width: 15px; margin-right: 5px; }
+        #message { text-align: center; color: red; margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>Welcome to the Rooms!</h1>
-    <p>This is where your list of chat rooms will appear (like your screenshot).</p>
+    <h1>Group Voice Chat</h1>
+    <p>Play With Global Friends</p>
 </div>
 
-<div class="user-info">
-    <h2>Your Account Details:</h2>
-    <p id="usernameDisplay">Loading...</p>
-    <p id="diamondsDisplay"></p>
-    <p>Success! You can now start building your room list here.</p>
+<div class="tabs">
+    <button class="tab-button active">Explore</button>
+    <button class="tab-button">Event</button>
+    <button class="tab-button">Disc</button>
+    <button class="tab-button">Search</button>
+</div>
+
+<div class="room-list-container">
+    <div id="roomList">
+        </div>
+    <p id="message"></p>
+    <div id="userInfo" style="text-align: center; margin-top: 20px; color: #5c677d;"></div>
 </div>
 
 <script>
-    // लोकल स्टोरेज से यूजर डेटा लोड करें
-    const userData = JSON.parse(localStorage.getItem('currentUser'));
+    const ROOM_API_URL = '/api/rooms';
+    const roomListDiv = document.getElementById('roomList');
+    const messageDiv = document.getElementById('message');
+    const userInfoDiv = document.getElementById('userInfo');
 
-    if (userData) {
-        document.getElementById('usernameDisplay').innerHTML = `Username: <strong>${userData.username}</strong> (Level: ${userData.level})`;
-        document.getElementById('diamondsDisplay').innerHTML = `Diamonds: <strong>${userData.diamonds}</strong>`;
+    // Load User Data
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+        userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
     } else {
-        // अगर कोई डेटा नहीं मिला, तो यूजर को वापस लॉगिन पर भेज दें
-        document.getElementById('usernameDisplay').textContent = "User data not found. Redirecting to login...";
-        setTimeout(() => {
-            window.location.href = '/'; 
-        }, 3000);
+        // If no user data, redirect back to login
+        window.location.href = '/';
     }
+
+    async function fetchRooms() {
+        messageDiv.textContent = 'Loading rooms...';
+        roomListDiv.innerHTML = ''; 
+
+        try {
+            const response = await fetch(ROOM_API_URL);
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                messageDiv.textContent = ''; // Clear loading message
+
+                if (data.rooms.length === 0) {
+                    roomListDiv.innerHTML = '<p style="text-align:center;">No rooms found. Create the first one!</p>';
+                    return;
+                }
+
+                data.rooms.forEach(room => {
+                    const roomCard = document.createElement('div');
+                    roomCard.className = 'room-card';
+                    // Example: Setting an arbitrary user count for display
+                    const userCount = Math.floor(Math.random() * 50) + 1; 
+
+                    roomCard.innerHTML = `
+                        <div class="room-name">${room.name}</div>
+                        <div class="room-details">
+                            <span>Owner: ${room.ownerUsername}</span>
+                            <div class="user-count">
+                                <img src="/images/user_icon.png" alt="Users">
+                                <span>${userCount}</span>
+                            </div>
+                        </div>
+                    `;
+                    roomCard.onclick = () => joinRoom(room.roomId); // Attach click handler
+                    roomListDiv.appendChild(roomCard);
+                });
+
+            } else {
+                messageDiv.textContent = `Error loading rooms: ${data.message || 'Unknown error'}`;
+            }
+
+        } catch (error) {
+            messageDiv.textContent = `NETWORK ERROR: Could not connect to fetch rooms. ${error.message}`;
+            console.error(error);
+        }
+    }
+    
+    // Placeholder function for joining the room (Will be fully developed later)
+    function joinRoom(roomId) {
+        alert(`Joining Room ID: ${roomId}. (Next step is to build the Voice Chat UI)`);
+        // Next development step: window.location.href = `/chat/${roomId}`;
+    }
+
+    fetchRooms(); // Call the function when the page loads
 </script>
 
 </body>
-                                                                                  </html>
-                                                                                  
+</html>
+
