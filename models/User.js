@@ -1,8 +1,7 @@
-// models/User.js (Complete and Corrected File)
+// models/User.js (Final Fix for Login Error)
 
 const mongoose = require('mongoose');
 
-// **महत्वपूर्ण सुधार**: स्कीमा का नाम lowercase 'userSchema' है।
 const userSchema = new mongoose.Schema({ 
     username: { 
         type: String, 
@@ -11,7 +10,7 @@ const userSchema = new mongoose.Schema({
     },
     diamonds: { 
         type: Number, 
-        default: 500 // New users get 500 free diamonds
+        default: 500
     }, 
     coins: { 
         type: Number, 
@@ -25,8 +24,6 @@ const userSchema = new mongoose.Schema({
         type: Number, 
         default: 0 
     },
-    
-    // Fields for Profile/Room Editing
     profilePic: { 
         type: String, 
         default: 'https://i.pravatar.cc/150?img=1' 
@@ -37,8 +34,7 @@ const userSchema = new mongoose.Schema({
     },
 });
 
-// Mongoose Model बनाना
-const User = mongoose.model('User', userSchema);
-
-// मॉडल को export करना
-module.exports = User;
+// ********** CRITICAL FIX **********
+// सीधे mongoose.model को export करें, जिससे server.js में 'User' हमेशा एक Mongoose Model रहे।
+module.exports = mongoose.model('User', userSchema); 
+// ***********************************
