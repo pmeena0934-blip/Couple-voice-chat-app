@@ -1,4 +1,4 @@
-// server.js (Complete File - UPDATED with Gift & Room Models)
+// server.js (Complete File - UPDATED with PWA & Entry Effect Gift Data)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,25 +9,26 @@ const path = require('path');
 // --- Import Models ---
 const User = require('./models/User');
 const Transaction = require('./models/Transaction');
-const Gift = require('./models/Gift'); // New Gift Model
-const Room = require('./models/Room'); // New Room Model
+const Gift = require('./models/Gift'); 
+const Room = require('./models/Room'); 
 
 // --- Import Routes ---
 const walletRoutes = require('./routes/wallet');
 
-// --- Initial Gift Data Setup Function ---
+// --- Initial Gift Data Setup Function (UPDATED) ---
 async function setupInitialGifts() {
     const defaultGifts = [
         { name: 'Rose', diamondCost: 10, category: 'Small', imageUrl: 'images/rose.png' },
         { name: 'Teddy Bear', diamondCost: 100, category: 'Medium', imageUrl: 'images/teddy.png' },
         { name: 'Luxury Car', diamondCost: 10000, category: 'Car', imageUrl: 'images/car.png' },
         { name: 'Super Rocket', diamondCost: 50000, category: 'SuperGift', imageUrl: 'images/rocket.png', isSuperGift: true },
-        { name: 'Golden Dragon', diamondCost: 1000000, category: 'SuperGift', imageUrl: 'images/dragon.png', isSuperGift: true },
+        // 10,00,000 Diamond Gift with CAR entry effect (NEW LOGIC ADDED)
+        { name: 'Golden Dragon', diamondCost: 1000000, category: 'SuperGift', imageUrl: 'images/dragon.png', isSuperGift: true, entryEffect: 'car' }, 
         { name: 'Entrance Frame', diamondCost: 500, category: 'EntryEffect', imageUrl: 'images/frame.png' }
     ];
 
     for (const gift of defaultGifts) {
-        // Only insert if it doesn't exist
+        // Only insert/update if it doesn't exist/needs update
         await Gift.updateOne({ name: gift.name }, gift, { upsert: true });
     }
     console.log('Default gifts ensured in database.');
@@ -37,7 +38,8 @@ async function setupInitialGifts() {
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+// Serve static files from the 'public' directory
+app.use(express.static('public')); 
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -86,7 +88,7 @@ app.post('/api/login', async (req, res) => {
 // ********** PROFILE AND ROOM EDIT API **********
 app.post('/api/profile/edit', async (req, res) => {
     const { username, newUsername, newRoomName, newProfilePicUrl } = req.body;
-    // ... (same as previous server.js logic) ...
+    
     try {
         let user = await User.findOne({ username });
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
@@ -139,7 +141,6 @@ app.post('/api/buy-diamonds', async (req, res) => {
 
 // ********** ADMIN APPROVAL API (Manual Logic) **********
 app.post('/api/admin/approve-payment', async (req, res) => {
-    // ... (same as previous server.js logic) ...
     const { transactionId, status } = req.body; 
     
     if (!transactionId || !['Approved', 'Rejected'].includes(status)) return res.status(400).json({ success: false, message: 'Invalid approval details or status.' });
@@ -182,10 +183,10 @@ app.get('/api/gifts', async (req, res) => {
 });
 // *********************************************************
 
-// ********** VIP ROOM CREATION API (NEW) **********
+// ********** VIP ROOM CREATION API **********
 app.post('/api/room/create', async (req, res) => {
     const { username, roomName, isVIP } = req.body;
-    const VIP_COST_DIAMONDS = 200; // Rs 200 is equivalent to 500 Diamonds from our package, using 200D for simplicity
+    const VIP_COST_DIAMONDS = 200; 
 
     try {
         const user = await User.findOne({ username });
@@ -200,7 +201,7 @@ app.post('/api/room/create', async (req, res) => {
         let newRoomData = {
             name: roomName,
             ownerUsername: username,
-            roomId: Date.now().toString().slice(-5), // Simple unique ID
+            roomId: Date.now().toString().slice(-5), 
             isVIP: false
         };
 
@@ -228,7 +229,7 @@ app.post('/api/room/create', async (req, res) => {
             success: true, 
             message: `Room "${newRoom.name}" created successfully. ${isVIP ? 'VIP status applied.' : ''}`, 
             room: newRoom,
-            newDiamondBalance: user.diamonds // Send updated balance
+            newDiamondBalance: user.diamonds 
         });
 
     } catch (error) {
@@ -238,17 +239,22 @@ app.post('/api/room/create', async (req, res) => {
 });
 // *************************************************
 
-// --- HOMEPAGE ROUTE (index.html) ---
+// --- HOMEPAGE ROUTE (index.html) and PWA Static Assets ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-// ------------------------------------
+
+// If using a separate /public folder (as suggested), these are already served by express.static('public')
+// app.get('/manifest.json', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'manifest.json')); });
+// app.get('/sw.js', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'sw.js')); });
+
+// *************************************
 
 // ********** Global Map to track user's room and ID (Socket.io) **********
 const userRoomMap = {};
 // ************************************************************************
 
-// --- Socket.io Logic (UPDATED for Super Gifts) ---
+// --- Socket.io Logic (UPDATED for Super Gifts & Entry Effects) ---
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     
@@ -268,17 +274,17 @@ io.on('connection', (socket) => {
 
     // Gift sending notification (Super Gift announcement added)
     socket.on('send_gift_realtime', (data) => {
+        // Send to the room for local animation (gift_received_animation handles entryEffect logic on client)
         io.to(data.roomId).emit('gift_received_animation', data);
         
-        // --- SUPER GIFT ANNOUNCEMENT (NEW) ---
+        // --- SUPER GIFT ANNOUNCEMENT ---
         if (data.isSuperGift) {
-            // Send global announcement for gifts > 50,000 diamonds
+            // Send global announcement for gifts (like 50,000+ diamond gifts)
             io.emit('global_announcement', {
                 message: `${data.sender} sent a **${data.giftName} (${data.amount} Diamonds)** to ${data.receiver} in Room ${data.roomId}! 🚀`,
                 type: 'SuperGift'
             });
         }
-        // --------------------------------------
     });
 
     // WebRTC Signaling: OFFER, ANSWER, ICE CANDIDATE
@@ -300,4 +306,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
-          
