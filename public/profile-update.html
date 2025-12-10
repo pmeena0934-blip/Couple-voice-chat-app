@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile</title>
+    <style>
+        /* --- General Styling and Theme (Matching Profile.html) --- */
+        :root {
+            --primary-color: #ff66b2; /* Hot Pink */
+            --secondary-color: #9933ff; /* Purple */
+            --bg-gradient: linear-gradient(180deg, #f0f8ff, #f8f0ff); /* Light White/Purple Gradient */
+            --text-dark: #333;
+            --text-light: #fff;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            margin: 0;
+            padding: 0;
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Top Header --- */
+        .top-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .top-header h1 { 
+            font-size: 1.3em; 
+            font-weight: 600; 
+            margin: 0;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .top-header a { 
+            color: var(--text-dark); 
+            text-decoration: none; 
+            font-size: 1.2em; 
+        }
+
+        /* --- Form Container --- */
+        .update-form-container {
+            width: 90%;
+            max-width: 500px;
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        /* --- Avatar Editor --- */
+        .avatar-editor {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+            padding: 2px;
+            background: white;
+            box-shadow: 0 0 15px rgba(255, 102, 178, 0.5); 
+        }
+        .avatar-editor img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .avatar-editor i {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: var(--secondary-color);
+            color: white;
+            border-radius: 50%;
+            padding: 8px;
+            font-size: 1em;
+            border: 3px solid white;
+        }
+        #profilePicInput {
+            display: none;
+        }
+
+        /* --- Input Fields --- */
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--secondary-color);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        /* --- Submit Button --- */
+        #updateBtn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            margin-top: 10px;
+        }
+        #updateBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: red;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="top-header">
+    <a href="/profile.html">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <h1>Edit Profile</h1>
+    <i style="color:white; font-size: 1.2em;">&nbsp;&nbsp;&nbsp;</i>
+</div>
+
+<div class="update-form-container">
+    
+    <form id="profileUpdateForm">
+        
+        <label for="profilePicInput" class="avatar-editor">
+            <img id="avatarPreview" src="https://i.pravatar.cc/150?img=7" alt="Avatar Preview">
+            <i class="fas fa-camera"></i>
+            <input type="file" id="profilePicInput" name="profilePic" accept="image/*">
+        </label>
+        
+        <input type="hidden" id="currentUsername" name="currentUsername">
+        
+        <div class="input-group">
+            <label for="newUsername">New Username</label>
+            <input type="text" id="newUsername" name="newUsername" placeholder="Enter new username" required>
+        </div>
+
+        <p id="message"></p>
+
+        <button type="submit" id="updateBtn">Update Profile</button>
+    </form>
+</div>
+
+<script>
+    const API_URL = ''; 
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    if (!currentUser) {
+        alert('Please login first.');
+        window.location.href = '/';
+    }
+
+    const form = document.getElementById('profileUpdateForm');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const profilePicInput = document.getElementById('profilePicInput');
+    const currentUsernameInput = document.getElementById('currentUsername');
+    const newUsernameInput = document.getElementById('newUsername');
+    const messageEl = document.getElementById('message');
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load current user data
+        currentUsernameInput.value = currentUser.username;
+        newUsernameInput.value = currentUser.username;
+        
+        // Set current profile picture preview
+        if (currentUser.profilePic) {
+             avatarPreview.src = currentUser.profilePic;
+        }
+    });
+
+    // --- Image Preview Logic ---
+    profilePicInput.onchange = event => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                avatarPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // --- Form Submission Logic (Interacting with server.js API) ---
+    form.onsubmit = async event => {
+        event.preventDefault();
+        
+        const newUsername = newUsernameInput.value.trim();
+        const currentUsername = currentUsernameInput.value;
+        const profilePicFile = profilePicInput.files[0];
+        
+        messageEl.textContent = 'Updating...';
+        
+        // 1. Check if anything was actually changed
+        if (newUsername === currentUsername && !profilePicFile) {
+            messageEl.textContent = 'No changes detected.';
+            return;
+        }
+
+        // 2. Create FormData object to handle file upload
+        const formData = new FormData();
+        formData.append('currentUsername', currentUsername);
+        formData.append('newUsername', newUsername);
+        if (profilePicFile) {
+            formData.append('profilePic', profilePicFile);
+        }
+        
+        try {
+            const response = await fetch(API_URL + '/api/user/profile/update', {
+                method: 'POST',
+                body: formData 
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                // 3. Update Local Storage with new user data
+                const updatedUser = data.user;
+                
+                // IMPORTANT: If username changed, update the username key in localStorage
+                if (updatedUser.username !== currentUsername) {
+                    alert(`Username changed from ${currentUsername} to ${updatedUser.username}.`);
+                }
+
+                // Update all user details in localStorage
+                localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                
+                messageEl.textContent = 'Profile updated successfully!';
+                messageEl.style.color = 'green';
+                
+                // 4. Redirect back to profile page after a delay
+                setTimeout(() => {
+                    window.location.href = '/profile.html';
+                }, 1500);
+
+            } else {
+                messageEl.textContent = data.message;
+                messageEl.style.color = 'red';
+            }
+        } catch (error) {
+            console.error('Profile Update Error:', error);
+            messageEl.textContent = 'Server error during update. Check console.';
+            messageEl.style.color = 'red';
+        }
+    };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</body>
+              </html>
+  
