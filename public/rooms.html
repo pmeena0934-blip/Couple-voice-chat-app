@@ -9,10 +9,10 @@
             font-family: 'Arial', sans-serif; 
             background-color: #f0f0ff; 
             margin: 0; 
-            padding-bottom: 70px; /* Space for the bottom navigation */
+            padding-bottom: 70px; 
         }
         
-        /* --- Top Header (Background Image/Gradient) --- */
+        /* --- Top Header --- */
         .top-banner {
             background: linear-gradient(135deg, #a737ff 0%, #ff5c77 100%);
             padding: 20px 0;
@@ -22,7 +22,7 @@
         }
         .top-banner h1 { margin: 0; font-size: 1.5em; }
 
-        /* --- Tabs: Related, Explore, Event, Disc (Screenshot 1000080552.jpg) --- */
+        /* --- Tabs --- */
         .tabs-header {
             display: flex;
             justify-content: space-around;
@@ -42,7 +42,7 @@
             position: relative;
         }
         .tab-link.active {
-            color: #5c677d; /* Darker color for active tab */
+            color: #5c677d;
             font-weight: bold;
         }
         .tab-link.active::after {
@@ -53,11 +53,11 @@
             transform: translateX(-50%);
             width: 70%;
             height: 3px;
-            background-color: #ff69b4; /* Pink underline */
+            background-color: #ff69b4; 
             border-radius: 2px;
         }
 
-        /* --- Category Filters (Recommend, New, Game, Blind date) --- */
+        /* --- Category Filters --- */
         .category-filters {
             display: flex;
             padding: 10px 20px;
@@ -88,7 +88,7 @@
             margin: auto; 
         }
         
-        /* --- Room Card Style (Matching the prominent cards in 1000078135.jpg) --- */
+        /* --- Room Card Style --- */
         .room-card {
             background: white; 
             border-radius: 10px; 
@@ -102,7 +102,6 @@
             overflow: hidden;
             border: 1px solid #eee;
         }
-        .room-card:hover { transform: translateY(-1px); }
 
         .room-frame {
             position: relative;
@@ -115,7 +114,7 @@
             height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #ffc107; /* Fake gold border for owner's pic */
+            border: 3px solid #ffc107; 
         }
 
         .room-info { flex-grow: 1; }
@@ -130,12 +129,46 @@
             font-weight: bold;
         }
         .user-count span { margin-left: 5px; }
+        
+        /* --- Room Creation Styling --- */
+        .create-room-box {
+            background: #fff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .create-room-box h3 { color: #ff69b4; margin-top: 0; }
+        .create-room-box input {
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            box-sizing: border-box;
+        }
+        .create-room-box button {
+            width: 100%; 
+            padding: 10px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        .btn-standard {
+            background-color: #5c677d; 
+            color: white; 
+        }
+        .btn-vip {
+            margin-top: 5px; 
+            background-color: #ffc107; 
+            color: #333; 
+        }
 
         /* --- Message/Error Styling --- */
         #message { text-align: center; color: red; margin-top: 20px; padding: 10px; background-color: #ffe0e6; border-radius: 5px; }
         #userInfo { text-align: center; margin-top: 20px; color: #5c677d; font-size: 0.9em; }
 
-        /* --- Simple Bottom Navigation (For completeness) --- */
+        /* --- Bottom Navigation (Visual Placeholder) --- */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -149,11 +182,7 @@
             height: 50px;
             z-index: 20;
         }
-        .nav-item {
-            text-align: center;
-            font-size: 0.8em;
-            color: #999;
-        }
+        .nav-item { text-align: center; font-size: 0.8em; color: #999; }
         .nav-item.active { color: #ff69b4; }
     </style>
 </head>
@@ -180,6 +209,17 @@
 </div>
 
 <div class="room-list-container">
+    
+    <div class="create-room-box">
+        <h3>Create Your Room</h3>
+        <input type="text" id="newRoomNameInput" placeholder="Enter Room Name (e.g., Couple Chat)">
+        <button onclick="createRoom(false)" class="btn-standard">
+            Create Standard Room
+        </button>
+        <button onclick="createRoom(true)" class="btn-vip">
+            Create VIP Room (200 Diamonds)
+        </button>
+    </div>
     <p id="message">Loading rooms...</p>
     <div id="roomList">
         </div>
@@ -196,17 +236,18 @@
 
 <script>
     const ROOM_API_URL = '/api/rooms';
+    const CREATE_ROOM_API = '/api/room/create';
     const roomListDiv = document.getElementById('roomList');
     const messageDiv = document.getElementById('message');
     const userInfoDiv = document.getElementById('userInfo');
 
-    // Load User Data (Check for login status)
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser) {
-        userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
-    } else {
-        // Fallback: If no user data, redirect back to login
+    // Load User Data
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    if (!currentUser) {
         window.location.href = '/';
+    } else {
+        userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
     }
 
     async function fetchRooms() {
@@ -221,14 +262,13 @@
                 messageDiv.textContent = ''; // Clear loading message
 
                 if (data.rooms.length === 0) {
-                    roomListDiv.innerHTML = '<p style="text-align:center; padding: 20px;">No rooms found. Time to create the first room!</p>';
+                    roomListDiv.innerHTML = '<p style="text-align:center; padding: 20px;">No rooms found. Use the box above to create the first room!</p>';
                     return;
                 }
 
                 data.rooms.forEach(room => {
-                    // Simulating random data for visual appeal, as the backend only returns core data
                     const userCount = Math.floor(Math.random() * 50) + 1; 
-                    const displayPic = room.ownerProfilePic || 'https://i.pravatar.cc/150?img=' + (Math.floor(Math.random() * 70) + 1); // Random profile pic
+                    const displayPic = room.ownerProfilePic || 'https://i.pravatar.cc/150?img=' + (Math.floor(Math.random() * 70) + 1);
 
                     const roomCard = document.createElement('div');
                     roomCard.className = 'room-card';
@@ -238,7 +278,7 @@
                             <img src="${displayPic}" alt="Room Owner">
                         </div>
                         <div class="room-info">
-                            <div class="room-name">${room.name}</div>
+                            <div class="room-name">${room.name} ${room.isVIP ? '✨VIP' : ''}</div>
                             <div class="room-id">ID: ${room.roomId} | Owner: ${room.ownerUsername}</div>
                         </div>
                         <div class="user-count">
@@ -246,7 +286,7 @@
                             <span>${userCount}</span>
                         </div>
                     `;
-                    roomCard.onclick = () => joinRoom(room.roomId); // Attach click handler
+                    roomCard.onclick = () => joinRoom(room.roomId); 
                     roomListDiv.appendChild(roomCard);
                 });
 
@@ -259,16 +299,58 @@
             console.error(error);
         }
     }
+
+    async function createRoom(isVIP) {
+        const roomName = document.getElementById('newRoomNameInput').value.trim();
+
+        if (!roomName) {
+            alert('Please enter a name for your room.');
+            return;
+        }
+
+        messageDiv.textContent = `Creating room "${roomName}"...`;
+
+        try {
+            const response = await fetch(CREATE_ROOM_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    username: currentUser.username, 
+                    roomName: roomName,
+                    isVIP: isVIP 
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                alert(data.message);
+                
+                // Update local storage and UI balance
+                if (isVIP) {
+                    currentUser.diamonds = data.newDiamondBalance;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    userInfoDiv.innerHTML = `Welcome, <strong>${currentUser.username}</strong>! Diamonds: ${currentUser.diamonds}`;
+                }
+                document.getElementById('newRoomNameInput').value = ''; // Clear input
+                fetchRooms(); // Reload the room list
+            } else {
+                alert(`Failed to create room: ${data.message || 'Server error'}`);
+                messageDiv.textContent = `Error: ${data.message || 'Failed to create room.'}`;
+            }
+
+        } catch (error) {
+            messageDiv.textContent = `NETWORK ERROR: Failed to communicate with server. ${error.message}`;
+        }
+    }
     
-    // Placeholder function for joining the room
     function joinRoom(roomId) {
-        alert(`Joining Room ID: ${roomId}. (Next step is building the Live Room UI!)`);
-        // Next development step: window.location.href = `/room/${roomId}`;
+        alert(`Joining Room ID: ${roomId}. (Next step is building the Live Voice Chat UI!)`);
     }
 
     fetchRooms(); // Call the function when the page loads
 </script>
 
 </body>
-        </html>
-    
+    </html>
+        
