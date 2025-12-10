@@ -1,4 +1,4 @@
-// server.js (FINAL VERSION - URI with Query Parameters)
+// server.js (FINAL VERSION - Updated with WebRTC Signaling & Advanced Socket Logic)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -27,9 +27,7 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 // --- Database Connection ---
-// ********** MONGODB_URI में QUERY PARAMETERS जोड़े गए हैं **********
 const MONGODB_URI = 'mongodb+srv://Meena7800:Meena9090@cluster0.c2utkn0.mongodb.net/couple-voice-chat-app?retryWrites=true&w=majority&appName=Cluster0';
-// *******************************************************************
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Atlas Connected'))
@@ -50,7 +48,7 @@ app.post('/api/login', async (req, res) => {
 
         if (!user) {
             // New user, create and give 1000 diamonds
-            user = new User({ username, diamonds: 1000 });
+            user = new User({ username, diamonds: 1000, level: 0, coins: 0, experiencePoints: 0 }); // New default fields added
             await user.save();
             return res.json({ success: true, message: 'Registration successful!', user });
         } else {
@@ -71,32 +69,77 @@ app.get('/', (req, res) => {
 });
 // ------------------------------------
 
+// ********** NEW: Global Map to track user's room and ID **********
+const userRoomMap = {};
+// ****************************************************************
 
-// --- Socket.io Logic ---
+// --- Socket.io Logic (UPDATED) ---
 io.on('connection', (socket) => {
-  console.log(`User Connected: ${socket.id}`);
+    console.log('A user connected:', socket.id);
+    
+    // जब कोई यूज़र किसी रूम में शामिल होता है
+    socket.on('join_room', ({ roomId, userId }) => {
+        socket.join(roomId);
+        userRoomMap[socket.id] = { roomId, userId };
+        
+        console.log(`${userId} joined room ${roomId}`);
 
-  // Room Joining (Phase 1)
-  socket.on('join_room', async ({ roomId, userId }) => {
-    socket.join(roomId);
-    io.to(roomId).emit('user_joined', { userId, count: io.sockets.adapter.rooms.get(roomId).size });
-  });
+        // उस रूम के सभी क्लाइंट को सूचित करें कि एक नया यूज़र आया है
+        const currentRoom = io.sockets.adapter.rooms.get(roomId);
+        const count = currentRoom ? currentRoom.size : 1;
+        io.to(roomId).emit('user_joined', { userId, count });
 
-  // WebRTC Signaling (Phase 1)
-  socket.on('webrtc_offer', (payload) => {
-    io.to(payload.target).emit('webrtc_offer', payload);
-  });
+        // रूम में मौजूद बाकी सभी यूज़र्स को संकेत भेजें (WebRTC के लिए)
+        const otherUsers = Array.from(currentRoom).filter(id => id !== socket.id);
+        socket.emit('all_other_users', { users: otherUsers }); // केवल नए यूज़र को बाकी की सूची भेजें
+    });
 
-  socket.on('webrtc_answer', (payload) => {
-    io.to(payload.target).emit('webrtc_answer', payload);
-  });
+    // WebRTC सिग्नलिंग: 1. OFFER
+    socket.on('webrtc_offer', (data) => {
+        // ऑफर को लक्षित यूज़र तक पहुँचाएँ
+        io.to(data.target).emit('webrtc_offer', {
+            sender: socket.id,
+            offer: data.offer
+        });
+    });
 
-  // disconnect हैंडलिंग
-  socket.on('disconnect', () => {
-    console.log('User Disconnected');
-  });
+    // WebRTC सिग्नलिंग: 2. ANSWER
+    socket.on('webrtc_answer', (data) => {
+        // उत्तर को लक्षित यूज़र तक पहुँचाएँ
+        io.to(data.target).emit('webrtc_answer', {
+            sender: socket.id,
+            answer: data.answer
+        });
+    });
+
+    // WebRTC सिग्नलिंग: 3. ICE CANDIDATE
+    socket.on('webrtc_ice_candidate', (data) => {
+        // ICE कैंडिडेट को लक्षित यूज़र तक पहुँचाएँ
+        io.to(data.target).emit('webrtc_ice_candidate', {
+            sender: socket.id,
+            candidate: data.candidate
+        });
+    });
+    
+    // गिफ्ट भेजने पर सभी को सूचित करें (Gifting API से अलग, रियल-टाइम UI के लिए)
+    socket.on('send_gift_realtime', (data) => {
+        io.to(data.roomId).emit('gift_received_animation', data);
+    });
+
+
+    // जब यूज़र डिस्कनेक्ट होता है
+    socket.on('disconnect', () => {
+        const roomInfo = userRoomMap[socket.id];
+        if (roomInfo) {
+            io.to(roomInfo.roomId).emit('user_left', { userId: roomInfo.userId });
+            delete userRoomMap[socket.id];
+        }
+        console.log('User disconnected:', socket.id);
+    });
 });
+// --- End of Socket.io Logic ---
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}. Frontend available`));
-      
+          
