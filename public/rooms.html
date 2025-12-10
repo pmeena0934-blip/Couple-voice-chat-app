@@ -3,528 +3,384 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Voice Chat - Explore</title>
+    <title>Voice Chat Rooms</title>
     <style>
         body { 
-            font-family: 'Arial', sans-serif; 
-            background-color: #f0f0ff; 
+            font-family: Arial, sans-serif; 
+            background: #f4f7f6; 
+            color: #333; 
             margin: 0; 
-            padding-bottom: 70px; 
         }
-        
-        /* --- Top Header (Simplified) --- */
-        .top-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            background-color: white;
-            border-bottom: 1px solid #eee;
-        }
-        .back-btn { font-size: 1.5em; color: #555; text-decoration: none; }
-        .store-icon { font-size: 1.5em; color: #ff69b4; text-decoration: none; }
-        .top-header h1 { font-size: 1.2em; margin: 0; color: #333; }
-        
-        /* --- Diamond/Coin Balance --- */
-        .balance-info {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 5px 15px;
-            background-color: white;
-            font-size: 0.9em;
-            color: #555;
-        }
-        .balance-info span { margin-left: 10px; }
-
-        /* --- Tabs --- */
-        .tabs-header {
-            display: flex;
-            justify-content: space-between;
-            background-color: white;
-            padding: 10px 15px;
-            border-bottom: 1px solid #eee;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .tab-group { display: flex; }
-        .tab-link {
-            text-decoration: none;
-            font-size: 1em;
-            color: #555;
-            padding: 5px 10px;
-            cursor: pointer;
-            position: relative;
-        }
-        .tab-link.active {
-            color: #ff69b4;
-            font-weight: bold;
-        }
-        .tab-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 70%;
-            height: 3px;
-            background-color: #ff69b4; 
-            border-radius: 2px;
-        }
-
-        /* --- Banner Section (Pink Star Secret) --- */
-        .main-banner {
-            width: 100%;
-            height: 150px;
-            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4XjD4n6B-H8xN_Jg9Yg2fJ0n5x9R5wQ&s'); /* Placeholder image */
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
-        }
-        .main-banner-text {
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 5px 15px;
-            border-radius: 15px;
-            font-weight: bold;
-            color: #ff69b4;
-            font-size: 1.2em;
-        }
-        .game-box-btn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: #8bc34a;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        /* --- Middle Feature Tabs (Ranking, Game, Family) --- */
-        .feature-tabs {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 15px;
-            background-color: #fff;
-            margin-bottom: 10px;
-        }
-        .feature-item {
-            text-align: center;
-            padding: 5px;
-            flex-basis: 30%;
-            border-radius: 8px;
-            background: linear-gradient(to bottom right, #f8f8f8, #e8e8e8);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .feature-item img { width: 40px; height: 40px; margin-bottom: 5px; }
-        .feature-item p { margin: 0; font-size: 0.8em; color: #555; font-weight: bold; }
-
-        /* --- Category Filters --- */
-        .category-filters {
-            display: flex;
-            padding: 10px 15px;
-            overflow-x: auto;
-            white-space: nowrap;
-            background-color: #f0f0ff;
-        }
-        .category-btn {
-            background-color: #fff;
-            color: #777;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 5px 15px;
-            margin-right: 10px;
-            font-size: 0.9em;
-            cursor: pointer;
-        }
-        .category-btn.active {
+        .header {
             background-color: #ff69b4;
             color: white;
-            border-color: #ff69b4;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
-
-        /* --- Room List Container --- */
-        .room-list-container { 
-            padding: 10px 15px; 
-            max-width: 600px; 
-            margin: auto; 
-        }
+        .header h1 { margin: 0; font-size: 1.5em; }
         
-        /* --- Room Card Style --- */
-        .room-card {
-            background: white; 
-            border-radius: 10px; 
-            margin-bottom: 15px; 
-            padding: 10px; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-            cursor: pointer; 
+        /* --- Profile and Balance --- */
+        .profile-section {
             display: flex;
             align-items: center;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #eee;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.2s;
         }
+        .profile-section:hover { background: rgba(255, 255, 255, 0.1); }
 
-        .room-frame {
-            position: relative;
-            width: 70px;
-            height: 70px;
-            margin-right: 15px;
-        }
-        .room-frame img {
-            width: 100%;
-            height: 100%;
+        .profile-img {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #ffc107; 
+            border: 2px solid white;
         }
-
-        .room-info { flex-grow: 1; }
-        .room-name { font-size: 1.1em; font-weight: bold; color: #333; margin-bottom: 2px; }
-        .room-id { font-size: 0.8em; color: #999; }
-        
-        .user-count { 
-            display: flex; 
-            align-items: center; 
-            font-size: 0.9em; 
-            color: #ff69b4; 
+        .user-info {
+            margin-left: 10px;
+            text-align: left;
+        }
+        .user-info strong {
+            display: block;
+            font-size: 1.1em;
+        }
+        .user-balance span {
+            display: inline-block;
+            margin-right: 10px;
+            font-size: 0.9em;
             font-weight: bold;
-        }
-        .user-count span { margin-left: 5px; }
-        
-        /* --- Room Creation Styling --- */
-        .create-room-box {
-            background: #fff; 
-            padding: 15px; 
-            border-radius: 10px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .create-room-box h3 { color: #ff69b4; margin-top: 0; }
-        .create-room-box input {
-            width: 100%; 
-            padding: 10px; 
-            margin-bottom: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-            box-sizing: border-box;
-        }
-        .create-room-box button {
-            width: 100%; 
-            padding: 10px; 
-            border: none; 
-            border-radius: 5px; 
             cursor: pointer;
         }
-        .btn-standard {
-            background-color: #5c677d; 
-            color: white; 
-        }
-        .btn-vip {
-            margin-top: 5px; 
-            background-color: #ffc107; 
-            color: #333; 
-        }
+        .diamond-icon { color: #00bcd4; }
+        .coin-icon { color: gold; }
 
-        /* --- Bottom Navigation --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+        /* --- Room Grid --- */
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .room-card {
             background: white;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            height: 50px;
-            z-index: 20;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            cursor: pointer;
         }
-        .nav-item { text-align: center; font-size: 0.8em; color: #999; }
-        .nav-item.active { color: #ff69b4; }
-        .nav-item-icon { font-size: 1.5em; margin-bottom: 3px; }
-
-        /* --- Download App Button --- */
-        .download-app-link {
-            position: fixed;
-            bottom: 70px;
-            right: 15px;
-            background: linear-gradient(45deg, #00bcd4, #00e5ff);
+        .room-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+        .room-header {
+            background-color: #5c677d;
             color: white;
-            padding: 10px 15px;
-            border-radius: 25px;
-            text-decoration: none;
+            padding: 10px;
+            font-size: 1.1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .room-header.vip {
+            background-color: #ffc107;
+            color: #333;
             font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            z-index: 30;
+        }
+        .room-details {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .owner-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 3px solid #ff69b4;
+        }
+        .room-info h3 {
+            margin: 0 0 5px;
+            color: #ff69b4;
+        }
+        .room-info p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        /* --- Create Room Button --- */
+        #createRoomBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #00bcd4;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #createRoomBtn:hover {
+            background-color: #0097a7;
+        }
+
+        /* --- Modal for Room Creation --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-content input[type="text"], 
+        .modal-content button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .modal-content button {
+            background-color: #ff69b4;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-<div class="top-header">
-    <a href="#" class="back-btn">⬅️</a>
-    <h1 style="color: #5c677d;">Store</h1>
-    <a href="#" class="store-icon">🛒</a>
-</div>
-<div class="balance-info">
-    <span>Balance: 🪙 10</span>
-    <span>💎 1+</span>
-</div>
-
-<div class="tabs-header">
-    <div class="tab-group">
-        <a href="#" class="tab-link">Related</a>
-        <a href="#" class="tab-link active">Explore</a>
-        <a href="#" class="tab-link">Event</a>
-        <a href="#" class="tab-link">Disc</a>
-    </div>
-    <a href="#" class="tab-link">🔍</a>
-</div>
-
-<div style="position: relative;">
-    <div class="main-banner">
-        <div class="game-box-btn" onclick="alert('Opening Game Box!')">Open Game Box</div>
-        <div class="main-banner-text">Pink Star Secret</div>
-    </div>
-</div>
-
-<div class="feature-tabs">
-    <div class="feature-item" onclick="alert('Opening Ranking!')">
-        <img src="https://via.placeholder.com/40/d4af37/ffffff?text=👑" alt="Ranking">
-        <p>Ranking</p>
-    </div>
-    <div class="feature-item" onclick="alert('Opening Game!')">
-        <img src="https://via.placeholder.com/40/9c27b0/ffffff?text=🎮" alt="Game">
-        <p>Game</p>
-    </div>
-    <div class="feature-item" onclick="alert('Opening Family!')">
-        <img src="https://via.placeholder.com/40/ff9800/ffffff?text=🏰" alt="Family">
-        <p>Family</p>
-    </div>
-</div>
-
-<div class="category-filters">
-    <button class="category-btn active">Recommend</button>
-    <button class="category-btn">New</button>
-    <button class="category-btn">Game</button>
-    <button class="category-btn">Blind date</button>
-</div>
-
-<div class="room-list-container">
-    
-    <h3 style="color: #333; margin-top: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Recommend user in the room</h3>
-    <div style="display: flex; overflow-x: auto; white-space: nowrap; margin-bottom: 20px;">
-        <div style="text-align: center; margin-right: 15px; cursor: pointer;">
-            <img src="https://i.pravatar.cc/150?img=4" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
-            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">big...</p>
-        </div>
-         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
-            <img src="https://i.pravatar.cc/150?img=5" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
-            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Kavya Sh...</p>
-        </div>
-         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
-            <img src="https://i.pravatar.cc/150?img=6" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
-            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">puja</p>
-        </div>
-         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
-            <img src="https://i.pravatar.cc/150?img=7" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
-            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Deepa</p>
-        </div>
-         <div style="text-align: center; margin-right: 15px; cursor: pointer;">
-            <img src="https://i.pravatar.cc/150?img=8" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff69b4;">
-            <p style="font-size: 0.8em; color: #333; margin-top: 5px;">Team</p>
+<div class="header">
+    <div class="profile-section" onclick="goToProfile()">
+        <img id="userProfilePic" class="profile-img" src="https://i.pravatar.cc/150?img=1" alt="Profile">
+        <div class="user-info">
+            <strong id="currentUsername">Guest</strong>
+            <div class="user-balance">
+                <span onclick="goToRecharge(event)" class="diamond-icon">💎 <span id="userDiamondBalance">0</span>+</span>
+                <span class="coin-icon">💰 <span id="userCoinBalance">0</span></span>
+                <span id="userLevel">LVL 0</span>
+            </div>
         </div>
     </div>
-    
-    <div class="create-room-box">
-        <h3>Create Your Room</h3>
-        <input type="text" id="newRoomNameInput" placeholder="Enter Room Name (e.g., Couple Chat)">
-        <button onclick="createRoom(false)" class="btn-standard">
-            Create Standard Room
-        </button>
-        <button onclick="createRoom(true)" class="btn-vip">
-            Create VIP Room (200 Diamonds)
-        </button>
-    </div>
-    <p id="message">Loading rooms...</p>
-    <div id="roomList">
+    <h1>Voice Rooms</h1>
+    <a href="/" onclick="localStorage.removeItem('currentUser')">Logout</a>
+</div>
+
+<div class="container">
+    <h2>Available Rooms</h2>
+    <p id="roomMessage">Loading rooms...</p>
+    <div class="room-grid" id="roomGrid">
         </div>
-    <div id="userInfo"></div>
 </div>
 
-<a href="#" class="download-app-link" onclick="handleAppDownload()">Download App</a>
+<button id="createRoomBtn">➕ Create New Room</button>
 
-
-<div class="bottom-nav">
-    <div class="nav-item">
-        <div class="nav-item-icon">🏠</div>
-        Home
-    </div>
-    <div class="nav-item active">
-        <div class="nav-item-icon">🎉</div>
-        Party
-    </div>
-    <div class="nav-item">
-        <div class="nav-item-icon">💬</div>
-        Chat
-    </div>
-    <div class="nav-item">
-        <div class="nav-item-icon">👤</div>
-        Mine
+<div id="roomModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Create a Voice Room</h2>
+        <form id="roomCreationForm">
+            <label for="roomName">Room Name:</label>
+            <input type="text" id="roomName" placeholder="Enter room name" required maxlength="30">
+            
+            <label>
+                <input type="checkbox" id="isVIP" value="VIP">
+                Make VIP Room (Cost: 200 💎)
+            </label>
+            <p id="roomCreationMessage" style="color: red;"></p>
+            <button type="submit">Create Room</button>
+        </form>
     </div>
 </div>
-
 
 <script>
-    const ROOM_API_URL = '/api/rooms';
-    const CREATE_ROOM_API = '/api/room/create';
-    const roomListDiv = document.getElementById('roomList');
-    const messageDiv = document.getElementById('message');
-    const userInfoDiv = document.getElementById('userInfo');
-
-    // Load User Data
+    const API_URL = ''; // Same domain
     let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    
+
     if (!currentUser) {
         window.location.href = '/';
     } else {
-        // Updated balance display to match the real UI style
-        document.querySelector('.balance-info').innerHTML = `
-            <span>Balance: 🪙 10</span>
-            <span>💎 ${currentUser.diamonds}+</span>
-        `;
+        updateUserInfo(currentUser);
+        fetchRooms();
+    }
+    
+    // --- Helper Functions ---
+    function updateUserInfo(user) {
+        currentUser = user; // Update the global currentUser object
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        document.getElementById('currentUsername').textContent = user.username;
+        document.getElementById('userDiamondBalance').textContent = user.diamonds;
+        document.getElementById('userCoinBalance').textContent = user.coins || 0;
+        document.getElementById('userLevel').textContent = `LVL ${user.level || 0}`;
+        document.getElementById('userProfilePic').src = user.profilePic || 'https://i.pravatar.cc/150?img=1';
     }
 
-    async function fetchRooms() {
-        messageDiv.textContent = 'Loading rooms...';
-        roomListDiv.innerHTML = ''; 
+    function goToRecharge(e) {
+        e.stopPropagation(); // Prevent the whole profile section click
+        window.location.href = '/recharge.html';
+    }
+    
+    function goToProfile() {
+        window.location.href = '/profile.html';
+    }
 
+    function closeModal() {
+        document.getElementById('roomModal').style.display = 'none';
+        document.getElementById('roomCreationForm').reset();
+        document.getElementById('roomCreationMessage').textContent = '';
+    }
+    
+    function openRoom(roomId) {
+        window.location.href = `/room.html?id=${roomId}`;
+    }
+
+    // --- Core Logic ---
+
+    // 1. Fetch Rooms and Render
+    async function fetchRooms() {
+        document.getElementById('roomMessage').textContent = 'Loading rooms...';
         try {
-            const response = await fetch(ROOM_API_URL);
+            const response = await fetch(`${API_URL}/api/rooms`);
             const data = await response.json();
 
-            if (response.ok && data.success) {
-                messageDiv.textContent = ''; 
-
-                if (data.rooms.length === 0) {
-                    roomListDiv.innerHTML = '<p style="text-align:center; padding: 20px;">No rooms found. Use the box above to create the first room!</p>';
-                    return;
-                }
-
-                data.rooms.forEach(room => {
-                    const userCount = Math.floor(Math.random() * 50) + 1; 
-                    const displayPic = room.ownerProfilePic || 'https://i.pravatar.cc/150?img=' + (Math.floor(Math.random() * 70) + 1);
-
-                    const roomCard = document.createElement('div');
-                    roomCard.className = 'room-card';
-                    
-                    roomCard.innerHTML = `
-                        <div class="room-frame">
-                            <img src="${displayPic}" alt="Room Owner">
-                        </div>
-                        <div class="room-info">
-                            <div class="room-name">${room.name} ${room.isVIP ? '✨VIP' : ''}</div>
-                            <div class="room-id">ID: ${room.roomId} | Owner: ${room.ownerUsername}</div>
-                        </div>
-                        <div class="user-count">
-                            <span>🔥</span>
-                            <span>${userCount}</span>
-                        </div>
-                    `;
-                    roomCard.onclick = () => joinRoom(room.roomId); 
-                    roomListDiv.appendChild(roomCard);
-                });
-
+            if (data.success && data.rooms.length > 0) {
+                renderRooms(data.rooms);
+                document.getElementById('roomMessage').textContent = '';
             } else {
-                messageDiv.textContent = `Error loading rooms: ${data.message || 'Unknown error'}`;
+                document.getElementById('roomMessage').textContent = 'No rooms found. Be the first to create one!';
+                document.getElementById('roomGrid').innerHTML = '';
             }
-
         } catch (error) {
-            messageDiv.textContent = `NETWORK ERROR: Could not connect to fetch rooms. ${error.message}`;
-            console.error(error);
+            document.getElementById('roomMessage').textContent = 'Error loading rooms. Please check server connection.';
+            console.error('Error fetching rooms:', error);
         }
     }
 
-    async function createRoom(isVIP) {
-        const roomName = document.getElementById('newRoomNameInput').value.trim();
+    function renderRooms(rooms) {
+        const grid = document.getElementById('roomGrid');
+        grid.innerHTML = '';
+        rooms.forEach(room => {
+            const card = document.createElement('div');
+            card.className = 'room-card';
+            card.onclick = () => openRoom(room.roomId);
+            
+            card.innerHTML = `
+                <div class="room-header ${room.isVIP ? 'vip' : ''}">
+                    <span>${room.name}</span>
+                    <span>${room.isVIP ? '🌟 VIP' : '🎧 Public'} | LVL ${room.roomLevel}</span>
+                </div>
+                <div class="room-details">
+                    <img class="owner-img" src="${room.ownerProfilePic}" alt="Owner">
+                    <div class="room-info">
+                        <h3>Room ID: ${room.roomId}</h3>
+                        <p>Owner: ${room.ownerUsername}</p>
+                        <p>Total Listeners: 0 (Live Count Needed)</p>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
 
-        if (!roomName) {
-            alert('Please enter a name for your room.');
-            return;
-        }
+    // 2. Handle Room Creation
+    document.getElementById('createRoomBtn').onclick = () => {
+        document.getElementById('roomModal').style.display = 'block';
+    };
 
-        messageDiv.textContent = `Creating room "${roomName}"...`;
+    document.getElementById('roomCreationForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const roomName = document.getElementById('roomName').value;
+        const isVIP = document.getElementById('isVIP').checked;
+        const messageEl = document.getElementById('roomCreationMessage');
+        
+        messageEl.textContent = 'Creating room...';
 
         try {
-            const response = await fetch(CREATE_ROOM_API, {
+            const response = await fetch(`${API_URL}/api/room/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     username: currentUser.username, 
-                    roomName: roomName,
-                    isVIP: isVIP 
-                }),
+                    roomName, 
+                    isVIP 
+                })
             });
 
             const data = await response.json();
 
-            if (response.ok && data.success) {
-                alert(data.message);
+            if (data.success) {
+                messageEl.textContent = 'Room created! Redirecting...';
                 
-                if (isVIP) {
+                // Update local diamonds if VIP room was purchased
+                if (data.newDiamondBalance !== undefined) {
                     currentUser.diamonds = data.newDiamondBalance;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    // Update the diamond balance display on success
-                     document.querySelector('.balance-info').innerHTML = `
-                        <span>Balance: 🪙 10</span>
-                        <span>💎 ${currentUser.diamonds}+</span>
-                    `;
+                    updateUserInfo(currentUser);
                 }
-                document.getElementById('newRoomNameInput').value = ''; 
-                fetchRooms(); 
+                
+                closeModal();
+                openRoom(data.room.roomId); // Go to the newly created room
+
             } else {
-                alert(`Failed to create room: ${data.message || 'Server error'}`);
-                messageDiv.textContent = `Error: ${data.message || 'Failed to create room.'}`;
+                messageEl.textContent = 'Error: ' + data.message;
             }
 
         } catch (error) {
-            messageDiv.textContent = `NETWORK ERROR: Failed to communicate with server. ${error.message}`;
+            messageEl.textContent = 'Network Error: Could not reach server.';
+            console.error('Room creation error:', error);
         }
-    }
-    
-    function joinRoom(roomId) {
-        window.location.href = `/room.html?id=${roomId}`;
-    }
-    
-    // --- Download App Logic ---
-    function handleAppDownload() {
-        // 1. यदि आप Android APK फ़ाइल का नाम जानते हैं, तो उसे यहां उपयोग करें।
-        // उदाहरण: 'https://yourdomain.com/downloads/couple-voice-chat.apk'
-        const apkUrl = '/couple-voice-chat.apk'; 
-        
-        // 2. फ़ाइल को डाउनलोड करने के लिए window.location.href का उपयोग करें
-        alert('App download is starting now...');
-        window.location.href = apkUrl;
-        
-        // **NOTE:** यह तभी काम करेगा जब आपके `public` फ़ोल्डर में APK फ़ाइल मौजूद हो
-        // और आपके `server.js` में उसे सर्व करने के लिए एक रूट बनाया गया हो।
-        
-        // **अगर APK फ़ाइल आपके पास नहीं है:**
-        // आप इसे Play Store या किसी अन्य जगह के लिंक पर रीडायरेक्ट कर सकते हैं।
-        // // window.open('YOUR_PLAY_STORE_LINK', '_blank'); 
-    }
-    // **************************
+    });
 
-    fetchRooms(); 
+    // Close modal on outside click
+    window.onclick = function(event) {
+        const modal = document.getElementById('roomModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
 </script>
-
 </body>
     </html>
-                
+            
