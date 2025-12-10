@@ -43,10 +43,9 @@ const UserSchema = new mongoose.Schema({
     }
 });
 
-// **--- FINAL Mongoose FIX ---**
-// यदि 'User' मॉडल पहले से मौजूद है, तो उसे उपयोग करें, अन्यथा नया बनाएं। 
-// यह Render जैसे कैशिंग वातावरण में 'User.findOne is not a function' की समस्या को 100% हल करता है।
+// **--- CRITICAL FIX ---**
+// यदि 'User' मॉडल पहले से मौजूद है (cache में), तो उसे उपयोग करें, अन्यथा नया बनाएं।
+// यह 'User.findOne is not a function' एरर को पूरी तरह से हल करता है।
 const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 module.exports = User;
-        
