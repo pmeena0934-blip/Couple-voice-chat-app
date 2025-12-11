@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mine - Profile</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body class="mine-body">
+
+    <header class="mine-header">
+        <div class="balance-info">
+            <span class="diamond-stat">💎 <span id="userDiamonds">0</span> <i class="fas fa-plus-circle"></i></span>
+            <span class="coin-stat">💰 <span id="userCoins">0</span> <i class="fas fa-plus-circle"></i></span>
+        </div>
+        <a href="index.html" class="logout-btn"><i class="fas fa-sign-out-alt"></i></a>
+    </header>
+
+    <div class="profile-card">
+        <div class="profile-top">
+            <img id="profilePic" src="user_profile_placeholder.jpg" alt="Profile Picture" class="profile-pic">
+            <div class="profile-details">
+                <h3 id="usernameDisplay">cjgjh</h3>
+                <p class="id-tag">ID:<span id="userId">530382233</span> <i class="fas fa-copy"></i></p>
+            </div>
+            <div class="profile-meta">
+                <span class="level-tag">Lv.<span id="userLevel">1</span></span>
+                <span class="love-zone">Love Zone</span>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div><span id="userCharisma">5</span> Charisma</div>
+            <div><span id="userContribution">0</span> Contribution</div>
+        </div>
+
+        <div class="follower-stats">
+            <div><span id="userFollowing">0</span> Following</div>
+            <div><span id="userFollowers">0</span> Followers</div>
+            <div><span id="userVisitors">0</span> Visitors</div>
+        </div>
+
+        <div class="close-friend-box">
+            <h4>Close friend (0/3)</h4>
+            <p>No soulmate/bestie yet, go invite your friends</p>
+        </div>
+    </div>
+
+    <div class="menu-grid">
+        <div class="menu-item"><i class="fas fa-gift"></i> Get Rewards</div>
+        <div class="menu-item"><i class="fas fa-tasks"></i> Task</div>
+        <a href="store.html" class="menu-item"><i class="fas fa-store"></i> Store</a>
+        <div class="menu-item"><i class="fas fa-user-friends"></i> Relationship</div>
+        
+        <div class="menu-item"><i class="fas fa-gem"></i> Premium</div>
+        <div class="menu-item"><i class="fas fa-star"></i> VIP</div>
+        <div class="menu-item"><i class="fas fa-wallet"></i> Wallet</div>
+        <div class="menu-item"><i class="fas fa-calendar-alt"></i> Monthly card</div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="home_feed.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="rooms.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Party</span>
+        </a>
+        <a href="chat.html" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Chat</span>
+        </a>
+        <a href="mine.html" class="nav-item active">
+            <i class="fas fa-user"></i>
+            <span>Mine</span>
+        </a>
+    </div>
+
+    <script>
+        function loadProfileData() {
+            const userData = localStorage.getItem('currentUserData');
+            if (userData) {
+                const user = JSON.parse(userData);
+                
+                // Update profile display
+                document.getElementById('usernameDisplay').textContent = user.username;
+                document.getElementById('userId').textContent = user.id;
+                document.getElementById('userLevel').textContent = user.level;
+                
+                // Update stats
+                document.getElementById('userDiamonds').textContent = user.diamonds;
+                document.getElementById('userCoins').textContent = user.coins;
+                document.getElementById('userCharisma').textContent = 5; // Static dummy value
+                document.getElementById('userContribution').textContent = 0; // Static dummy value
+                
+                document.getElementById('userFollowing').textContent = user.following;
+                document.getElementById('userFollowers').textContent = user.followers;
+                document.getElementById('userVisitors').textContent = user.visitors;
+
+                document.title = `${user.username}'s Profile`;
+
+                // Set profile picture (using a placeholder image/logic)
+                document.getElementById('profilePic').src = `https://picsum.photos/id/${(user.id % 50) + 10}/200/200`;
+
+            } else {
+                window.location.href = 'index.html'; 
+            }
+        }
+        
+        // Simple Logout
+        document.querySelector('.logout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('currentUserData');
+            window.location.href = 'index.html';
+        });
+
+        document.addEventListener('DOMContentLoaded', loadProfileData);
+    </script>
+</body>
+  </html>
+  
