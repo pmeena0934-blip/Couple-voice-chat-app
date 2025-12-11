@@ -4,70 +4,306 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice Rooms</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Minimal CSS for rooms.html layout */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #ff69b4;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        #logout {
+            background: none;
+            border: 1px solid white;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #rooms-container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .room-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            border-left: 5px solid #ff69b4;
+        }
+        .room-card:hover {
+            background-color: #fff0f5;
+        }
+        .room-info h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .room-info p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        #create-room-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #create-room-btn:hover {
+            background-color: #218838;
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-content input, .modal-content select {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-<script>
-    // **CRITICAL FIX:** API URL Stability
-    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
-    const socket = io({ transports: ['websocket', 'polling'] }); 
 
-    let currentUsername = localStorage.getItem('currentUsername');
+    <header>
+        <h1 id="welcome-message">Welcome, User!</h1>
+        <button id="logout">Logout</button>
+    </header>
 
-    if (!currentUsername) {
-        window.location.href = 'index.html'; // Redirect if not logged in
-    }
+    <div id="rooms-container">
+        <p id="loading-message">Loading rooms...</p>
+    </div>
 
-    // --- Rooms Logic ---
+    <button id="create-room-btn">+ Create New Room</button>
 
-    async function loadRooms() {
-        try {
-            // FIX: Using API_URL for correct API access
-            const response = await fetch(`${API_URL}/api/rooms`); 
-            const data = await response.json();
+    <div id="createRoomModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create Your Room</h2>
+            <form id="createRoomForm">
+                <input type="text" id="roomName" placeholder="Enter Room Name" required>
+                <select id="roomType">
+                    <option value="true">Public</option>
+                    <option value="false">Private</option>
+                </select>
+                <button type="submit" style="background-color:#ff69b4; color:white; border:none; padding:10px 20px; border-radius:5px; margin-top:10px;">Create Room</button>
+            </form>
+            <p id="room-creation-error" style="color:red; margin-top:10px;"></p>
+        </div>
+    </div>
 
-            if (data.success) {
-                renderRooms(data.rooms);
-            } else {
-                alert("Failed to load rooms."); // Displays error 1000080755.jpg
+
+    <script>
+        const API_URL = 'https://couple-voice-chat-app.onrender.com'; // **Change this to your actual Render URL**
+        const roomsContainer = document.getElementById('rooms-container');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const logoutButton = document.getElementById('logout');
+        const loadingMessage = document.getElementById('loading-message');
+
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const modal = document.getElementById('createRoomModal');
+        const closeModal = document.getElementsByClassName('close')[0];
+        const createRoomForm = document.getElementById('createRoomForm');
+        const roomCreationError = document.getElementById('room-creation-error');
+
+        let currentUser = null;
+
+        // --- Initialization and User Check ---
+        function initRoomsPage() {
+            const userData = localStorage.getItem('currentUserData');
+            const username = localStorage.getItem('currentUsername');
+
+            if (!userData || !username) {
+                alert('You must be logged in to view rooms.');
+                window.location.href = 'index.html';
+                return;
             }
-        } catch (error) {
-            console.error("Load Rooms API Error:", error);
-            alert("Failed to load rooms."); 
-        }
-    }
 
-    async function createRoom(roomName) {
-        try {
-            // FIX: Using API_URL for correct API access
-            const response = await fetch(`${API_URL}/api/rooms/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    roomName: roomName, 
-                    ownerUsername: currentUsername 
-                })
-            });
+            currentUser = JSON.parse(userData);
+            welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
             
-            const data = await response.json();
+            // Connect to Socket.IO and register socket
+            const socket = io(API_URL);
+            socket.on('connect', () => {
+                socket.emit('register_socket', currentUser.username);
+            });
 
-            if (data.success) {
-                // If successful, redirect to the room page
-                window.location.href = `room.html?id=${data.room.id}`;
-            } else {
-                alert("Server error during room creation."); // Displays error 1000080756.jpg
-            }
-        } catch (error) {
-            console.error("Create Room API Error:", error);
-            alert("Server error during room creation. Check console."); 
+            loadRooms();
         }
-    }
-    
-    // ... (rest of the functions: renderRooms, navigation logic, etc.) ...
 
-    // Load rooms when the page starts
-    loadRooms(); 
-</script>
+        // --- API Call to Load Rooms ---
+        async function loadRooms() {
+            loadingMessage.style.display = 'block';
+            roomsContainer.innerHTML = ''; 
 
+            try {
+                const response = await fetch(`${API_URL}/api/rooms`);
+                const data = await response.json();
+
+                if (data.success) {
+                    loadingMessage.style.display = 'none';
+                    if (data.rooms.length === 0) {
+                        roomsContainer.innerHTML = '<p>No rooms found. Be the first to create one!</p>';
+                    } else {
+                        renderRooms(data.rooms);
+                    }
+                } else {
+                    alert(`Failed to load rooms: ${data.message}`);
+                    roomsContainer.innerHTML = '<p style="color:red;">Failed to load rooms. Please check server logs.</p>';
+                }
+            } catch (error) {
+                // This catches the 'Failed to load rooms' network error
+                console.error('Network error loading rooms:', error);
+                alert('Failed to load rooms. Server might be sleeping. Please refresh.');
+                roomsContainer.innerHTML = '<p style="color:red;">NETWORK ERROR. Failed to load rooms. Check server logs.</p>';
+            }
+        }
+
+        // --- Rendering Rooms ---
+        function renderRooms(rooms) {
+            rooms.forEach(room => {
+                const roomCard = document.createElement('div');
+                roomCard.className = 'room-card';
+                roomCard.dataset.roomId = room.id;
+                roomCard.innerHTML = `
+                    <div class="room-info">
+                        <h3>${room.name} (${room.isPublic ? 'Public' : 'Private'})</h3>
+                        <p>Owner: ${room.owner}</p>
+                        <p>Members: ${room.liveCount}</p>
+                    </div>
+                `;
+                roomCard.addEventListener('click', () => joinRoom(room.id));
+                roomsContainer.appendChild(roomCard);
+            });
+        }
+
+        // --- Room Actions ---
+        function joinRoom(roomId) {
+            alert(`Joining room: ${roomId}. (Functionality to be implemented)`);
+            // In a real app, this would navigate to the actual voice chat page (e.g., room.html)
+            // window.location.href = `room.html?id=${roomId}`; 
+        }
+
+        // --- Logout ---
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('currentUsername');
+            localStorage.removeItem('currentUserData');
+            window.location.href = 'index.html';
+        });
+
+        // --- Modal Control ---
+        createRoomBtn.onclick = function() {
+            modal.style.display = "block";
+        }
+        closeModal.onclick = function() {
+            modal.style.display = "none";
+            roomCreationError.textContent = ''; // Clear error on close
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+                roomCreationError.textContent = ''; 
+            }
+        }
+
+        // --- Room Creation Form Submission ---
+        createRoomForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            roomCreationError.textContent = ''; 
+
+            const roomName = document.getElementById('roomName').value;
+            const roomType = document.getElementById('roomType').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/rooms/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: roomName, 
+                        ownerUsername: currentUser.username, 
+                        isPublic: roomType // 'true' or 'false'
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Room "${data.room.name}" created!`);
+                    modal.style.display = "none";
+                    document.getElementById('roomName').value = ''; // Clear input
+                    loadRooms(); // Reload room list
+                } else {
+                    roomCreationError.textContent = 'Server error during room creation: ' + data.message;
+                }
+            } catch (error) {
+                console.error('Network error creating room:', error);
+                roomCreationError.textContent = 'NETWORK ERROR: Could not connect to server.';
+            }
+        });
+
+        // Start the page logic
+        initRoomsPage();
+    </script>
 </body>
-</html>
+    </html>
+                    
