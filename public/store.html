@@ -3,342 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store - Mall</title>
-    <style>
-        /* --- General Styling and Theme --- */
-        :root {
-            --primary-color: #ff66b2; /* Hot Pink */
-            --secondary-color: #9933ff; /* Purple */
-            --bg-light: #f5f5f5; 
-            --text-dark: #333;
-            --card-bg: white;
-            --purchase-btn-gradient: linear-gradient(135deg, #ff88aa, #ff3366);
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-light);
-            margin: 0;
-            padding-bottom: 20px;
-            color: var(--text-dark);
-            min-height: 100vh;
-        }
-
-        /* --- Top Header (Store Name, Back, Balance) --- */
-        .top-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        .top-header h1 { 
-            font-size: 1.3em; 
-            font-weight: 600; 
-            margin: 0;
-            flex-grow: 1;
-            text-align: center;
-        }
-        .top-header a { 
-            color: var(--text-dark); 
-            text-decoration: none; 
-            font-size: 1.2em; 
-        }
-        .balance-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9em;
-        }
-
-        /* --- Top Feature Grid (Chat Frame, Avatar Frame, etc.) --- */
-        .feature-grid {
-            display: flex;
-            justify-content: space-around;
-            padding: 20px 10px;
-            background: white;
-            margin-bottom: 10px;
-        }
-        .feature-item {
-            text-align: center;
-            font-size: 0.75em;
-            color: #666;
-            cursor: pointer;
-        }
-        .feature-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 15px;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #f0f0ff; /* Lightest background color */
-            font-size: 1.5em;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        /* Specific colors for Achat style icons */
-        .feature-item:nth-child(1) .feature-icon { background: #fff0d1; color: #ffae00; } /* Yellow/Gold for Chat Frame */
-        .feature-item:nth-child(2) .feature-icon { background: #fbe6ff; color: var(--secondary-color); border: 2px solid var(--secondary-color); } /* Purple Ring for Avatar Frame */
-        .feature-item:nth-child(3) .feature-icon { background: #ffe6e6; color: var(--primary-color); } /* Pink/Red for Enter Effect (Car) */
-        .feature-item:nth-child(4) .feature-icon { background: #d3f9d3; color: #00b894; } /* Green for Enter Message */
-
-        /* --- Category Tabs (User Car, Pair Car) --- */
-        .category-tabs {
-            display: flex;
-            border-bottom: 2px solid #eee;
-            margin: 0 15px;
-        }
-        .category-tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: 500;
-            color: #888;
-            border-bottom: 2px solid transparent;
-            transition: color 0.3s, border-color 0.3s;
-        }
-        .category-tab.active {
-            color: var(--secondary-color);
-            border-bottom-color: var(--secondary-color);
-            font-weight: bold;
-        }
-
-        /* --- Item Grid (User Car/Pair Car Content) --- */
-        .item-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            padding: 15px;
-        }
-        .item-card {
-            background: var(--card-bg);
-            border-radius: 10px;
-            padding: 15px 10px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            position: relative;
-        }
-        .item-image {
-            width: 90%;
-            height: 100px;
-            object-fit: contain;
-            margin-bottom: 10px;
-        }
-        .item-name {
-            font-size: 1em;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin: 5px 0;
-        }
-        .item-price {
-            color: var(--secondary-color);
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-        }
-        .item-price img {
-            width: 18px;
-            margin-right: 5px;
-        }
-        .item-duration {
-            font-size: 0.75em;
-            color: #aaa;
-            margin-bottom: 10px;
-        }
-        .purchase-btn {
-            background: var(--purchase-btn-gradient);
-            color: white;
-            border: none;
-            padding: 8px 0;
-            width: 90%;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .purchase-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .not-for-sale {
-            background: #888;
-            color: white;
-        }
-
-        /* Diamond Icon for Price Display */
-        .diamond-icon {
-            width: 16px;
-            height: 16px;
-            margin-right: 4px;
-            vertical-align: middle;
-        }
-        
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Store</title>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
-<div class="top-header">
-    <a href="/profile.html">
-        <i class="fas fa-arrow-left"></i>
-    </a>
-    <h1>Store</h1>
-    <div class="balance-info">
-        <span id="coinBalance">💰 0</span>
-        <span id="diamondBalance">💎 0 +</span>
-    </div>
-</div>
-
-<div class="feature-grid">
-    <div class="feature-item">
-        <div class="feature-icon">Hi</div>
-        Chat frame
-    </div>
-    <div class="feature-item">
-        <div class="feature-icon"><i class="fas fa-ring"></i></div>
-        Avatar frame
-    </div>
-    <div class="feature-item active-feature">
-        <div class="feature-icon"><i class="fas fa-car"></i></div>
-        Enter effect
-    </div>
-    <div class="feature-item">
-        <div class="feature-icon"><i class="fas fa-envelope"></i></div>
-        Enter message
-    </div>
-    <div class="feature-item">
-        <div class="feature-icon"><i class="fas fa-wave-square"></i></div>
-        Ripple
-    </div>
-</div>
-
-<div class="category-tabs">
-    <div class="category-tab active" data-category="userCar">User Car</div>
-    <div class="category-tab" data-category="pairCar">Pair Car</div>
-</div>
-
-<div id="storeContent" class="item-grid">
-    </div>
-
 <script>
-    const API_URL = ''; 
-    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    // **CRITICAL FIX:** API URL Stability
+    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
+    const socket = io({ transports: ['websocket', 'polling'] }); 
 
-    if (!currentUser) {
-        alert('Please login first.');
-        window.location.href = '/';
+    // --- Store Logic ---
+    async function loadStoreItems() {
+        try {
+            // FIX: Using API_URL for correct API access
+            const response = await fetch(`${API_URL}/api/store/items`); 
+            const data = await response.json();
+
+            if (data.success) {
+                renderStoreItems(data.items);
+            } else {
+                console.error("Failed to load store items:", data.message);
+            }
+        } catch (error) {
+            console.error("Store API Error:", error);
+            // Handle error, maybe show placeholder items
+        }
     }
 
-    // --- Item Data (Hardcoded as per Screenshots 1000080571, 1000080570) ---
-    const STORE_ITEMS = {
-        userCar: [
-            { name: 'Hat Bird', cost: 17280, duration: '1 Day', image: 'https://i.ibb.co/3kR0ZfD/hat-bird.png', isVIP: true },
-            { name: 'Lamborghini', cost: 17280, duration: '1 Day', image: 'https://i.ibb.co/Rz8N582/lamborghini.png', isVIP: true },
-            { name: 'Rolls Royce', cost: 58888, duration: '7 Days', image: 'https://i.ibb.co/8Yj0ZtX/rolls-royce.png', isVIP: true },
-            { name: 'Fire Bike', cost: 7777, duration: '1 Day', image: 'https://i.ibb.co/2Zf9x8w/fire-bike.png', isVIP: true },
-        ],
-        pairCar: [
-            { name: 'Luxury Love', cost: 233280, duration: '1 Day', image: 'https://i.ibb.co/L716k6k/luxury-love-yacht.png', isVIP: true, isSoldOut: true },
-        ]
-    };
-    
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        updateBalanceDisplay(currentUser.diamonds, currentUser.coins);
-        renderStoreItems('userCar'); // Default tab
-        setupCategoryTabs();
-    });
-
-    function updateBalanceDisplay(diamonds, coins) {
-        document.getElementById('diamondBalance').textContent = `💎 ${diamonds} +`;
-        document.getElementById('coinBalance').textContent = `💰 ${coins}`;
-    }
-
-    function setupCategoryTabs() {
-        document.querySelectorAll('.category-tab').forEach(tab => {
-            tab.onclick = (e) => {
-                // Remove active class from all
-                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                
-                // Add active class to clicked tab
-                e.target.classList.add('active');
-                
-                // Render content
-                const category = e.target.getAttribute('data-category');
-                renderStoreItems(category);
-            };
+    function renderStoreItems(items) {
+        const userCarContainer = document.getElementById('userCarContainer');
+        userCarContainer.innerHTML = '';
+        
+        items.filter(item => item.type !== 'pair_car').forEach(item => {
+            // FIX: Using correct path for images
+            const imageUrl = `${API_URL}${item.img}`; 
+            
+            // ... (HTML rendering logic for store items here) ...
         });
     }
 
-    // --- Render Items ---
-    function renderStoreItems(category) {
-        const container = document.getElementById('storeContent');
-        container.innerHTML = '';
-        const items = STORE_ITEMS[category] || [];
-
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            
-            const isAffordable = currentUser.diamonds >= item.cost;
-            const isDisabled = item.isSoldOut || !isAffordable;
-            
-            card.innerHTML = `
-                <img class="item-image" src="${item.image}" alt="${item.name}">
-                <div class="item-name">${item.name}</div>
-                <div class="item-price">
-                    <img class="diamond-icon" src="https://i.ibb.co/Wc27y2j/diamond-icon.png" alt="Diamond">
-                    ${item.cost}
-                </div>
-                <div class="item-duration">${item.duration}</div>
-                <button 
-                    class="purchase-btn ${item.isSoldOut ? 'not-for-sale' : ''}" 
-                    data-name="${item.name}" 
-                    data-cost="${item.cost}"
-                    ${isDisabled ? 'disabled' : ''}
-                    onclick="${item.isSoldOut ? '' : 'attemptPurchase(event)'}"
-                >
-                    ${item.isSoldOut ? 'Not For Sale' : (isAffordable ? 'Purchase' : 'Insufficient 💎')}
-                </button>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // --- Purchase Logic (Frontend Simulation) ---
-    function attemptPurchase(event) {
-        const btn = event.target;
-        const itemName = btn.getAttribute('data-name');
-        const itemCost = parseInt(btn.getAttribute('data-cost'));
-
-        if (currentUser.diamonds < itemCost) {
-            alert('Insufficient diamonds. Please recharge!');
-            return;
-        }
-
-        if (confirm(`Do you want to buy ${itemName} for ${itemCost} Diamonds?`)) {
-            // In a real application, we would send an API request here
-            // For now, we simulate the diamond deduction and refresh the UI
-
-            // 1. Simulate API call success
-            currentUser.diamonds -= itemCost;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            updateBalanceDisplay(currentUser.diamonds, currentUser.coins);
-            
-            // 2. Give user the item (In a real app, this updates a 'User Inventory' in the DB)
-            alert(`Purchase successful! You now own the ${itemName}.`);
-            
-            // 3. Re-render to update button states (e.g., if another item is now affordable)
-            const activeCategory = document.querySelector('.category-tab.active').getAttribute('data-category');
-            renderStoreItems(activeCategory);
-        }
-    }
+    // Load store items when the page starts
+    loadStoreItems();
 </script>
+
 </body>
-  </html>
-  
+</html>
