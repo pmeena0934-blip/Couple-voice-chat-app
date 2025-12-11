@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Feed</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+</head>
+<body>
+
+    <header class="feed-header">
+        <h2>Achat Official</h2>
+        <i class="fas fa-search"></i>
+    </header>
+
+    <div class="feed-container">
+        
+        <div class="user-post-box">
+            <img id="myAvatar" src="user_profile_placeholder.jpg" alt="Avatar" class="post-avatar">
+            <input type="text" id="postInput" placeholder="What's happening? Public Post...">
+            <button class="post-button" onclick="submitPost()">Post</button>
+        </div>
+
+        <div id="postsList">
+            <div class="post-card">
+                <div class="post-header">
+                    <img src="user_pic1.jpg" alt="User Avatar" class="post-avatar">
+                    <div>
+                        <span class="post-username">Pratiks...</span>
+                    </div>
+                    <span class="post-time">5 minutes ago</span>
+                </div>
+                <p>Hello everyone! Starting a new Voice Party now! Join us!</p>
+                <div class="post-actions">
+                    <span class="post-action-item"><i class="fas fa-heart"></i> 12 Likes</span>
+                    <span class="post-action-item"><i class="fas fa-comment"></i> 4 Comments</span>
+                    <span class="post-action-item"><i class="fas fa-share"></i> Share</span>
+                </div>
+            </div>
+            
+            <div class="post-card">
+                <div class="post-header">
+                    <img src="user_pic2.jpg" alt="User Avatar" class="post-avatar">
+                    <div>
+                        <span class="post-username">ZIGZAG...</span>
+                    </div>
+                    <span class="post-time">1 hour ago</span>
+                </div>
+                <p>Enjoying the new car in the store! Must buy! 🚗</p>
+                <div class="post-actions">
+                    <span class="post-action-item"><i class="fas fa-heart"></i> 45 Likes</span>
+                    <span class="post-action-item"><i class="fas fa-comment"></i> 10 Comments</span>
+                    <span class="post-action-item"><i class="fas fa-share"></i> Share</span>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <div class="bottom-nav">
+        <a href="home_feed.html" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="rooms.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Party</span>
+        </a>
+        <a href="chat.html" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Chat</span>
+        </a>
+        <a href="mine.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Mine</span>
+        </a>
+    </div>
+
+    <script>
+        function loadAvatar() {
+            const userData = localStorage.getItem('currentUserData');
+            if (userData) {
+                const user = JSON.parse(userData);
+                document.getElementById('myAvatar').src = `https://picsum.photos/id/${(user.id % 50) + 10}/200/200`; // Placeholder
+            }
+        }
+        
+        function submitPost() {
+            const postText = document.getElementById('postInput').value.trim();
+            if (postText === "") {
+                alert("Post cannot be empty.");
+                return;
+            }
+            alert("Post submitted! (Backend logic needs to be implemented)");
+            document.getElementById('postInput').value = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAvatar);
+    </script>
+</body>
+</html>
