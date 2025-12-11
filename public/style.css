@@ -1,218 +1,779 @@
-/* General Resets and Base Styles */
-* {
-    box-sizing: border-box;
+/* GLOBAL STYLES */
+body {
+    font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
-}
-
-body {
-    background-color: #f0f2f5;
+    background-color: #f0f2f5; /* Light background */
     color: #333;
-    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
 }
-
-/* --- Global Header/Navigation --- */
-header {
-    background-color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-/* --- Bottom Navigation Bar --- */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background-color: #ffffff;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: space-around;
-    padding: 8px 0;
-    z-index: 1000;
-}
-
-.nav-item {
-    text-align: center;
-    color: #aaa;
-    transition: color 0.3s;
-}
-
-.nav-item.active {
-    color: #ff69b4; /* Pink active color */
-}
-
-.nav-item i {
-    font-size: 20px;
-    display: block;
-    margin-bottom: 2px;
-}
-
-.nav-item span {
-    font-size: 10px;
-}
-
-
-/* --- Login Page Specific Styles (index.html) --- */
-.login-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: linear-gradient(135deg, #f0f2f5 0%, #fff0f5 100%);
-}
-
-.login-box {
-    background-color: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 350px;
-    text-align: center;
-}
-
-.login-box h2 {
-    color: #333;
-    margin-bottom: 25px;
-}
-
-.login-box input[type="text"] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1em;
-}
-
-.login-box button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1em;
-    font-weight: bold;
-    cursor: pointer;
-    background-color: #ff69b4; 
-    color: white;
-}
-
 .error-message {
-    background-color: #ffe0e0;
-    color: #cc0000;
-    border: 1px solid #cc0000;
+    color: #ff69b4;
+    background-color: #ffe0e6;
+    border: 1px solid #ff69b4;
     padding: 10px;
     margin-top: 15px;
     border-radius: 5px;
     font-size: 0.9em;
+    text-align: center;
 }
-
-/* --- Rooms/Party Page Styles (rooms.html) --- */
-
-.rooms-page-header {
-    background-color: #ffffff;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-#rooms-container {
-    padding: 20px;
-    padding-bottom: 70px; 
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-}
-
-.room-card {
-    background: linear-gradient(135deg, #fff 0%, #f7f7ff 100%);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-left: 5px solid #6a5acd; 
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-}
-
-.room-card h3 {
-    margin: 0;
-    color: #6a5acd;
+.vip-icon {
+    color: gold;
     font-size: 1.1em;
 }
 
-.room-card p {
-    margin: 5px 0 0;
-    font-size: 0.85em;
-    color: #666;
+/* ---------------------------------------------------- */
+/* 1. LOGIN (index.html) */
+/* ---------------------------------------------------- */
+.login-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f9f9f9;
 }
-
-.room-details {
-    text-align: right;
+.login-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
 }
-.room-details span {
-    display: block;
-    font-weight: bold;
-    color: #ff69b4;
+.app-title {
+    color: #333;
+    margin-bottom: 25px;
+    font-weight: 600;
 }
-
-/* --- Create Room Button and Modal Styles --- */
-#create-room-btn {
-    position: fixed;
-    bottom: 80px; 
-    right: 20px;
-    background-color: #28a745;
+.login-container input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #ff69b4; /* Pink/Magenta */
     color: white;
     border: none;
-    padding: 15px 20px;
-    border-radius: 50px;
-    font-size: 1em;
+    border-radius: 8px;
+    font-size: 1.1em;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s;
+}
+.login-btn:hover {
+    background-color: #e35a9f;
 }
 
-.modal {
-    display: none;
+/* ---------------------------------------------------- */
+/* 2. BOTTOM NAVIGATION (Applies to Rooms, Mine, Store, Home) */
+/* ---------------------------------------------------- */
+.bottom-nav {
     position: fixed;
-    z-index: 2000;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #999;
+    font-size: 0.75em;
+    padding: 5px;
+    transition: color 0.3s;
+}
+.nav-item i {
+    font-size: 1.3em;
+    margin-bottom: 3px;
+}
+.nav-item.active {
+    color: #ff69b4; /* Active Pink/Magenta */
+}
+
+/* ---------------------------------------------------- */
+/* 3. ROOMS PAGE (rooms.html) */
+/* ---------------------------------------------------- */
+.rooms-header {
+    background-color: white;
+    padding-top: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-bottom: 10px;
+}
+#welcomeMsg {
+    padding: 0 15px 10px;
+    font-weight: bold;
+    color: #555;
+}
+.header-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 5px 0;
+}
+.header-nav-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1em;
+    font-weight: 500;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.header-nav-btn.active {
+    color: #ff69b4;
+    border-bottom: 2px solid #ff69b4;
+}
+.banner-section {
+    position: relative;
+    padding: 15px;
+}
+.banner-img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+.category-pills {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+.pill {
+    flex-grow: 1;
+    text-align: center;
+    padding: 15px 10px;
+    border-radius: 10px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.ranking { background: linear-gradient(to right, #ffc04c, #ff9800); }
+.game { background: linear-gradient(to right, #9370DB, #8A2BE2); }
+.family { background: linear-gradient(to right, #6495ED, #4682B4); }
+.sub-nav {
+    display: flex;
+    padding: 10px 15px;
+}
+.sub-nav-btn {
+    background: none;
+    border: none;
+    padding: 5px 10px;
+    margin-right: 15px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    color: #666;
+}
+.sub-nav-btn.active {
+    background-color: #ff69b4;
+    color: white;
+}
+.room-list-container {
+    padding-bottom: 70px; /* Space for bottom nav */
+}
+.room-card {
+    display: flex;
+    background-color: white;
+    margin: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    overflow: hidden;
+}
+.room-left-bar {
+    width: 5px;
+}
+.room-info {
+    flex-grow: 1;
+    padding: 15px;
+}
+.room-info h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+.room-owner {
+    font-size: 0.8em;
+    color: #888;
+}
+.room-stats {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9em;
+    color: #666;
+    border-left: 1px solid #eee;
+}
+.room-stats .member-count {
+    font-weight: bold;
+    color: #ff69b4;
+    margin: 3px 0;
+}
+.floating-btn {
+    position: fixed;
+    bottom: 75px;
+    right: 15px;
+    background-color: #00b894; /* Green button */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 30px;
+    font-size: 1em;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 990;
+}
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 1001; 
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.6);
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4); 
+    padding-top: 60px;
 }
-
 .modal-content {
-    background-color: #fff;
+    background-color: #fefefe;
     margin: 15% auto;
-    padding: 25px;
-    border-radius: 15px;
-    width: 85%;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
     max-width: 400px;
+    position: relative;
     text-align: center;
 }
-
-.modal-content input, .modal-content select {
-    width: 90%;
+.modal-content input {
+    width: calc(100% - 20px);
     padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
+    margin: 10px 0 20px 0;
     border-radius: 5px;
+    border: 1px solid #ddd;
+}
+.create-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    margin-top: 10px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+.standard-btn { background-color: #ff69b4; }
+.vip-btn { background-color: #8A2BE2; }
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.user-recommend-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 15px;
+}
+.user-pill {
+    text-align: center;
+    font-size: 0.8em;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-bottom: 5px;
+}
+.bonus {
+    background-color: gold;
+    color: #333;
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 0.7em;
+    margin-top: 2px;
 }
 
-.create-room-submit-btn {
-    background-color:#ff69b4; 
-    color:white; 
-    border:none; 
-    padding:10px 20px; 
-    border-radius:5px; 
-    margin-top:10px;
+/* ---------------------------------------------------- */
+/* 4. PROFILE PAGE (mine.html) */
+/* ---------------------------------------------------- */
+.mine-body {
+    background: linear-gradient(to top, #f0f2f5 50%, #fde6ff 100%); /* Light Purple Gradient */
+}
+.mine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    color: #333;
+}
+.balance-info span {
+    margin-right: 15px;
+    font-weight: bold;
+}
+.logout-btn {
+    color: #666;
+    font-size: 1.2em;
+}
+.profile-card {
+    background-color: white;
+    margin: 0 15px;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+.profile-top {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+.profile-pic {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-right: 15px;
+    object-fit: cover;
+}
+.profile-details h3 {
+    margin: 0;
+    color: #333;
+}
+.id-tag {
+    font-size: 0.8em;
+    color: #999;
+}
+.profile-meta {
+    margin-left: auto;
+    text-align: right;
+}
+.level-tag {
+    background-color: #ffc0cb;
+    color: #D6277D;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: bold;
+}
+.love-zone {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #ff69b4;
+}
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.stats-row div {
+    flex: 1;
+    font-size: 0.9em;
+    color: #666;
+}
+.stats-row span {
+    display: block;
+    font-weight: bold;
+    color: #333;
+}
+.follower-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+}
+.follower-stats div {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+    position: relative;
+}
+.follower-stats div::after {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7em;
+    font-weight: normal;
+    color: #999;
+    margin-top: 2px;
+}
+.close-friend-box {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 20px;
+}
+.close-friend-box h4 {
+    margin: 0 0 5px 0;
+}
+.close-friend-box p {
+    font-size: 0.8em;
+    color: #999;
+    margin: 0;
+}
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background-color: white;
+    margin: 15px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding-bottom: 70px;
+}
+.menu-item {
+    text-align: center;
+    font-size: 0.75em;
+    color: #666;
+    text-decoration: none;
+    cursor: pointer;
+}
+.menu-item i {
+    display: block;
+    font-size: 1.8em;
+    margin-bottom: 5px;
+    color: #8A2BE2; /* Violet color for icons */
+}
+
+/* ---------------------------------------------------- */
+/* 5. STORE PAGE (store.html) */
+/* ---------------------------------------------------- */
+.store-header {
+    background-color: #f0f2f5;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+}
+.balance-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+.category-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+}
+.category-item {
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 15px;
+    color: #666;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+.category-item.active {
+    background-color: #ff69b4;
+    color: white;
+}
+.store-tabs {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+    background-color: white;
+    margin-bottom: 15px;
+}
+.store-tab-btn {
+    padding: 5px 20px;
+    border: none;
+    background: none;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+.store-tab-btn.active {
+    color: #ff69b4;
+    border-bottom: 3px solid #ff69b4;
+}
+
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 0 15px 70px 15px;
+}
+.store-item-card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    text-align: center;
+}
+.item-image {
+    width: 100%;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+.store-item-card h4 {
+    font-size: 1em;
+    margin: 5px 0;
+}
+.price-tag {
+    font-weight: bold;
+    color: #ff69b4;
+}
+.purchase-btn {
+    background-color: #ff69b4;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    margin-top: 10px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------- */
+/* 6. HOME FEED PAGE (home_feed.html) */
+/* ---------------------------------------------------- */
+.feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+}
+.feed-container {
+    padding: 10px 0 70px 0; /* Space for nav bar */
+}
+.user-post-box {
+    background-color: white;
+    padding: 15px;
+    border-bottom: 8px solid #f0f2f5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.user-post-box input {
+    flex-grow: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    outline: none;
+}
+.post-button {
+    background-color: #ff69b4;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+.post-card {
+    background-color: white;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.post-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+.post-username {
+    font-weight: bold;
+}
+.post-time {
+    color: #999;
+    font-size: 0.8em;
+    margin-left: auto;
+}
+.post-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+    color: #666;
+    font-size: 0.9em;
+}
+.post-action-item {
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------- */
+/* 7. LIVE ROOM PAGE (live_room.html) */
+/* ---------------------------------------------------- */
+.live-room-body {
+    background: url('room_bg_placeholder.jpg') no-repeat center center fixed; /* Placeholder image */
+    background-size: cover;
+    color: white;
+    padding-bottom: 70px; /* Space for bottom controls */
+}
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.3); 
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+}
+.back-btn, .follow-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2em;
+}
+.room-content-container {
+    padding-top: 60px; /* Space for fixed header */
+}
+.owner-slot-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+.owner-slot {
+    position: relative;
+    width: 140px; 
+    height: 140px; 
+    border-radius: 50%;
+    border: 3px solid gold; 
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.4);
+}
+.owner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.owner-frame {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border: 5px solid transparent; 
+    border-radius: 50%;
+}
+.voice-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 15px 5px; 
+    padding: 20px 10px;
+    text-align: center;
+}
+.voice-slot {
+    position: relative;
+    width: 70px; 
+    height: 70px;
+    border-radius: 50%;
+    margin: 0 auto;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.slot-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #ff69b4; 
+}
+.empty-slot {
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px dashed rgba(255, 255, 255, 0.5);
+}
+.empty-slot .fa-plus-circle {
+    font-size: 1.5em;
+    color: rgba(255, 255, 255, 0.7);
+}
+.slot-name {
+    position: absolute;
+    bottom: -20px;
+    font-size: 0.7em;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.slot-level, .slot-number-tag {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: purple;
+    padding: 2px 5px;
+    border-radius: 10px;
+    font-size: 0.6em;
+    font-weight: bold;
+}
+.room-bottom-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 1000;
+}
+.control-btn, .gift-btn {
+    background: #ff69b4;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    margin-right: 10px;
+    font-size: 1.2em;
+}
+.control-left {
+    display: flex;
+}
+.pk-ranking {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    margin-right: 10px;
+}
+.control-right {
+    display: flex;
+    align-items: center;
     }
-        
+          
