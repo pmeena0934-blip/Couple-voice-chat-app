@@ -3,396 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile - Mine</title>
-    <style>
-        /* --- General Styling and Theme (Light Purple Gradient) --- */
-        :root {
-            --primary-color: #ff66b2; /* Hot Pink */
-            --secondary-color: #9933ff; /* Purple */
-            --bg-gradient: linear-gradient(180deg, #f0f8ff, #f8f0ff); /* Light White/Purple Gradient */
-            --text-dark: #333;
-            --text-light: #fff;
-            --card-bg: rgba(255, 255, 255, 0.8);
-            --shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-gradient);
-            margin: 0;
-            padding: 0;
-            color: var(--text-dark);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-bottom: 70px; /* Space for bottom nav */
-        }
-        
-        /* --- Top Header (Icons and Balance) --- */
-        .top-header {
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: transparent;
-            z-index: 10;
-        }
-        .top-header .balance-info {
-            display: flex;
-            gap: 15px;
-            font-weight: bold;
-            color: var(--secondary-color);
-        }
-        .top-header button {
-            background: none;
-            border: none;
-            font-size: 1.5em;
-            color: var(--secondary-color);
-            cursor: pointer;
-        }
-
-        /* --- User Profile Card --- */
-        .profile-card {
-            text-align: center;
-            padding: 20px 15px;
-            position: relative;
-        }
-        .profile-avatar-container {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 10px;
-            border-radius: 50%;
-            border: 3px solid var(--primary-color);
-            padding: 2px;
-            box-shadow: 0 0 15px rgba(255, 102, 178, 0.5); /* Glowing effect */
-            background: white;
-            position: relative;
-        }
-        .profile-avatar {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .username-info h2 {
-            margin: 5px 0 2px;
-            font-size: 1.8em;
-            color: var(--text-dark);
-        }
-        .username-info p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #888;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5px;
-        }
-        .level-badge, .id-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.7em;
-            font-weight: bold;
-            color: var(--text-light);
-            background: var(--secondary-color);
-        }
-        .id-badge { background: #555; }
-        
-        .verify-btn {
-            background: var(--primary-color);
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        /* --- Stats Grid (Following, Followers, Visitors) --- */
-        .stats-grid {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-        }
-        .stat-item {
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin-bottom: 2px;
-        }
-        .stat-label {
-            font-size: 0.8em;
-            color: #888;
-        }
-
-        /* --- Close Friend Section --- */
-        .close-friend-section {
-            background: var(--card-bg);
-            margin: 15px;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-        }
-        .close-friend-section h3 {
-            margin: 0 0 10px;
-            font-size: 1.1em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--secondary-color);
-        }
-        .close-friend-section p {
-            margin: 0;
-            font-size: 0.85em;
-            color: #aaa;
-        }
-
-        /* --- Menu Grid (Get Rewards, Task, Store, Relationship) --- */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin: 15px;
-            padding: 15px 0;
-            background: var(--card-bg);
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-        }
-        .menu-item {
-            text-align: center;
-            text-decoration: none;
-            color: var(--text-dark);
-            font-size: 0.8em;
-            font-weight: 500;
-        }
-        .menu-icon {
-            width: 45px;
-            height: 45px;
-            background: #f3e9ff; /* Lightest purple */
-            border-radius: 12px;
-            margin: 0 auto 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            color: var(--secondary-color);
-            font-size: 1.5em;
-        }
-        .menu-item:nth-child(2) .menu-icon { background: #ffe6f2; color: var(--primary-color); } /* Pink for Task */
-
-        /* --- Bottom Navigation (Footer) --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            background: white;
-            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-            padding: 5px 0;
-            z-index: 20;
-        }
-        .nav-item {
-            text-align: center;
-            font-size: 0.7em;
-            padding: 5px 0;
-            color: #888;
-            text-decoration: none;
-        }
-        .nav-item.active {
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-        .nav-item i {
-            font-size: 1.5em;
-            display: block;
-            margin-bottom: 2px;
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Edit Profile</title>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
-<div class="top-header">
-    <div class="balance-info">
-        <span id="diamondBalance">💎 0 +</span>
-        <span id="coinBalance">💰 0 +</span>
-    </div>
-    <button onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-</div>
-
-<div class="profile-card">
-    <div class="profile-avatar-container">
-        <img id="userProfilePic" class="profile-avatar" src="https://i.pravatar.cc/150?img=7" alt="Profile Picture">
-    </div>
-    
-    <div class="username-info">
-        <h2 id="currentUsernameDisplay">User Name</h2>
-        <p>
-            ID: <span id="userIdDisplay">530382233</span>
-        </p>
-        <p style="margin-top: 5px;">
-             <span id="userLevelBadge" class="level-badge">Lv. 0</span>
-             <span id="userCharismaBadge" class="id-badge">C. 0</span>
-             <span id="userContributionBadge" class="id-badge">Con. 0</span>
-        </p>
-    </div>
-
-    <button class="verify-btn" onclick="goToProfileUpdate()">Verify profile</button>
-</div>
-
-<div class="stats-grid">
-    <div class="stat-item">
-        <div id="followingCount" class="stat-number">0</div>
-        <div class="stat-label">Following</div>
-    </div>
-    <div class="stat-item">
-        <div id="followersCount" class="stat-number">10</div>
-        <div class="stat-label">Followers</div>
-    </div>
-    <div class="stat-item">
-        <div id="visitorsCount" class="stat-number">10</div>
-        <div class="stat-label">Visitors</div>
-    </div>
-</div>
-
-<div class="close-friend-section">
-    <h3>
-        Close friend (0/3)
-        <i class="fas fa-question-circle"></i>
-    </h3>
-    <p>No soulmate/bestie yet, go invite your friends</p>
-</div>
-
-<div class="menu-grid">
-    <a href="#" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-gift"></i></div>
-        Get Rewards
-    </a>
-    <a href="#" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-list-check"></i></div>
-        Task
-    </a>
-    <a href="/store.html" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-store"></i></div>
-        Store
-    </a>
-    <a href="#" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-heart"></i></div>
-        Relationship
-    </a>
-    <a href="/recharge.html" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-credit-card"></i></div>
-        Recharge
-    </a>
-    <a href="#" onclick="exchangeCoins()" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-exchange-alt"></i></div>
-        Exchange
-    </a>
-</div>
-
-<div class="bottom-nav">
-    <a href="/" class="nav-item">
-        <i class="fas fa-home"></i> Home
-    </a>
-    <a href="/rooms.html" class="nav-item">
-        <i class="fas fa-users"></i> Party
-    </a>
-    <a href="/chat.html" class="nav-item">
-        <i class="fas fa-comment-dots"></i> Chat
-    </a>
-    <a href="/profile.html" class="nav-item active">
-        <i class="fas fa-user-circle"></i> Mine
-    </a>
-</div>
-
 <script>
-    const API_URL = ''; 
-    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    // **CRITICAL FIX:** API URL Stability
+    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
+    const socket = io({ transports: ['websocket', 'polling'] }); 
+    let currentUsername = localStorage.getItem('currentUsername');
 
-    if (!currentUser) {
-        alert('Please login first.');
-        window.location.href = '/';
-    }
+    // --- Profile Logic ---
+    async function handleProfileUpdate(e) {
+        e.preventDefault();
+        const newUsername = document.getElementById('newUsernameInput').value;
+        const profilePicFile = document.getElementById('profilePicInput').files[0];
+        const errorDisplay = document.getElementById('updateErrorDisplay');
 
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        updateProfileUI(currentUser);
-    });
-
-    function updateProfileUI(user) {
-        document.getElementById('currentUsernameDisplay').textContent = user.username;
-        document.getElementById('userIdDisplay').textContent = user.id || generateFakeId(); 
-        document.getElementById('diamondBalance').textContent = `💎 ${user.diamonds} +`;
-        document.getElementById('coinBalance').textContent = `💰 ${user.coins} +`;
-        document.getElementById('userLevelBadge').textContent = `Lv. ${user.level || 0}`;
+        const formData = new FormData();
+        formData.append('username', currentUsername);
         
-        // Use the profile picture saved in local storage
-        if (user.profilePic) {
-             document.getElementById('userProfilePic').src = user.profilePic;
+        // Add new username only if it changed
+        if (newUsername && newUsername !== currentUsername) {
+            formData.append('newUsername', newUsername);
         }
 
-        // Fictional data for Charisma/Contribution (can be updated from server if available)
-        document.getElementById('userCharismaBadge').textContent = `C. ${user.charisma || 0}`;
-        document.getElementById('userContributionBadge').textContent = `Con. ${user.contribution || 0}`;
-    }
-    
-    // Fictional ID generator if the database doesn't store a separate user ID
-    function generateFakeId() {
-        return Math.floor(100000000 + Math.random() * 900000000);
-    }
-
-    function goToProfileUpdate() {
-        // This button should lead to an update page where the user can change username/pic
-        window.location.href = '/profile-update.html'; 
-    }
-
-    function logout() {
-        if (confirm('Are you sure you want to log out?')) {
-            localStorage.removeItem('currentUser');
-            window.location.href = '/';
+        // Add file if uploaded
+        if (profilePicFile) {
+            formData.append('profilePic', profilePicFile);
         }
-    }
-    
-    // --- Coin to Diamond Exchange Logic ---
-    async function exchangeCoins() {
-        if (!confirm(`Are you sure you want to exchange Coins for Diamonds? (10 Coins = 1 Diamond)`)) return;
-        
+
         try {
-            const response = await fetch(API_URL + '/api/exchange/coin-to-diamond', {
+            // FIX: Using API_URL for correct API access and Multer handling
+            const response = await fetch(`${API_URL}/api/user/profile/update/pic`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: currentUser.username })
+                body: formData // Multer expects FormData
             });
-            const data = await response.json();
             
-            if (data.success) {
-                alert(data.message);
-                
-                // Update local storage and UI
-                currentUser.diamonds = data.newDiamondBalance;
-                currentUser.coins = data.newCoinBalance;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                updateProfileUI(currentUser);
+            const data = await response.json();
 
+            if (data.success) {
+                // Update local storage and reload page
+                localStorage.setItem('currentUsername', data.user.username);
+                localStorage.setItem('currentUserData', JSON.stringify(data.user));
+                alert("Profile updated successfully!");
+                window.location.reload(); 
             } else {
-                alert('Exchange failed: ' + data.message);
+                errorDisplay.textContent = 'Server error during update: ' + data.message; // Displays error 1000080758.jpg
             }
+
         } catch (error) {
-            console.error('Exchange failed:', error);
-            alert('Server error during exchange.');
+            console.error("Profile Update API Error:", error);
+            errorDisplay.textContent = 'Server error during update. Check console.'; 
         }
     }
-
-</script>
-</body>
-    </html>
     
+    // ... (rest of the functions: loadProfileData, event listeners) ...
+</script>
+
+</body>
+</html>
