@@ -3,203 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diamond Recharge</title>
+    <title>Recharge Package</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css"> 
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f7f6; color: #333; margin: 0; padding-bottom: 20px; }
-        .header { background-color: #ff69b4; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: space-between; }
-        .header h1 { margin: 0; font-size: 1.5em; }
-        .back-btn { color: white; font-size: 1.2em; text-decoration: none; padding: 5px; }
-        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
-        .balance-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .balance-card span { font-size: 1.2em; font-weight: bold; color: #00bcd4; }
-        .plans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .plan-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
-        .plan-card.selected { border-color: #ff69b4; background-color: #ffe6f0; }
-        .plan-card h3 { margin-top: 0; color: #00bcd4; font-size: 1.4em; }
-        .plan-card p { margin: 5px 0 10px; font-size: 0.9em; color: #777; }
-        .plan-card button { background-color: #ff69b4; color: white; border: none; padding: 8px 15px; border-radius: 20px; width: 100%; font-weight: bold; }
-        .payment-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
-        .qr-code-box { text-align: center; margin: 15px 0; padding: 10px; border: 1px dashed #ccc; border-radius: 8px; }
-        .qr-code-box img { max-width: 80%; height: auto; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
-        .form-group input[type="text"], .form-group input[type="file"], .form-group button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .form-group button { background-color: #00bcd4; color: white; border: none; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
-        #previewImage { max-width: 100%; max-height: 150px; margin-top: 10px; display: none; border: 1px solid #ddd; border-radius: 5px; }
+        /* Specific CSS for the Recharge Page (Inspired by 1000080759.jpg) */
+        body {
+            background-color: #1a0033; /* Dark purple/black background */
+            color: white;
+        }
+        .recharge-container {
+            padding: 15px;
+        }
+        .recharge-header {
+            text-align: center;
+            padding: 20px 0;
+            background: url('images/recharge_header_bg.jpg') no-repeat center center/cover; /* Placeholder background */
+            border-bottom: 2px solid gold;
+        }
+        .recharge-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: gold;
+        }
+        .gift-pack-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .gift-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .gift-item img {
+            width: 80%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .gift-item p {
+            margin: 0;
+            font-size: 0.8em;
+        }
+        .diamond-cost {
+            color: #9933ff; /* Purple for diamonds */
+            font-weight: bold;
+        }
+        .price-button {
+            background: linear-gradient(to right, #ff9900, #ffcc00);
+            color: #1a0033;
+            border: none;
+            padding: 8px 10px;
+            margin-top: 5px;
+            border-radius: 20px;
+            font-weight: bold;
+            width: 90%;
+            font-size: 0.9em;
+        }
+        .timer {
+            text-align: center;
+            font-size: 1.5em;
+            color: gold;
+            margin: 15px 0;
+        }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <a href="/rooms.html" class="back-btn">⬅️</a>
-    <h1>💎 Buy Diamonds</h1>
-    <span></span>
-</div>
-
-<div class="container">
-    <div class="balance-card">
-        Current Diamond Balance: <span id="currentDiamondBalance">0</span> 💎
+<div class="recharge-container">
+    <div class="recharge-header">
+        <i class="fas fa-arrow-left" onclick="history.back()" style="position: absolute; left: 15px; top: 15px; color: white;"></i>
+        <h2>Recharge Package</h2>
+        <div class="timer">01 D 08 H 58 M 50 S</div>
     </div>
 
-    <div class="plans-grid" id="plansGrid">
-        </div>
-
-    <div class="payment-section">
-        <h2>1. Complete Payment (UPI)</h2>
-        <div class="qr-code-box">
-            <p>Scan this QR Code for payment:</p>
-            <img id="qrCodeImage" src="https://via.placeholder.com/250x250/5c677d/ffffff?text=YOUR+UPI+QR+CODE" alt="UPI QR Code">
-            <p style="font-size: 0.9em; color: #ff69b4;">UPI ID: **poojamahta67-1@okicici**</p>
-            <p style="font-size: 0.9em; color: #ff69b4;">(Pay the exact amount corresponding to the selected plan)</p>
-        </div>
-
-        <h2>2. Submit Payment Details</h2>
-        <form id="rechargeForm">
-            <input type="hidden" id="selectedPlanId">
-            <div class="form-group">
-                <label for="diamondAmount">Selected Diamonds:</label>
-                <input type="text" id="diamondAmountDisplay" disabled value="0 Diamonds">
+    <div class="gift-pack-section">
+        <h3 style="text-align: center; margin-top: 20px; color: gold;">✨ Gift Pack ✨</h3>
+        <div id="giftPackGrid" class="gift-pack-grid">
             </div>
-            
-            <div class="form-group">
-                <label for="paidAmount">Amount Paid (₹):</label>
-                <input type="text" id="paidAmountDisplay" disabled value="₹ 0">
-            </div>
-
-            <div class="form-group">
-                <label for="utrNumber">UTR / Transaction ID:</label>
-                <input type="text" id="utrNumber" name="utrNumber" placeholder="Enter 12 or 14 digit UTR number" required>
-            </div>
-
-            <div class="form-group">
-                <label for="screenshot">Payment Screenshot:</label>
-                <input type="file" id="screenshotFile" name="screenshot" accept="image/*" required onchange="previewScreenshot(event)">
-                <img id="previewImage" alt="Payment Screenshot Preview">
-            </div>
-
-            <button type="submit" id="submitButton" disabled>
-                Submit Recharge Request
-            </button>
-            <p id="submissionMessage" style="text-align: center; color: green; margin-top: 10px;"></p>
-        </form>
     </div>
 </div>
 
 <script>
-    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    let selectedPlan = null;
-    
-    // Diamond Plans (As requested: 600 Diamonds for ₹200)
-    const DIAMOND_PLANS = [
-        { id: 'P01', diamonds: 600, price: 200, bonus: 0 },
-        { id: 'P02', diamonds: 1200, price: 400, bonus: 50 },
-        { id: 'P03', diamonds: 3000, price: 1000, bonus: 200 },
-        { id: 'P04', diamonds: 6000, price: 2000, bonus: 500 }
+    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
+    const socket = io({ transports: ['websocket', 'polling'] }); 
+
+    // --- Static Recharge Data (Based on your screenshots) ---
+    // Note: Since you don't have a backend for this, we hardcode the data here for display.
+    const rechargePackages = [
+        // Row 1 (Shields/Bundles)
+        { img: 'images/gift_bundle_60k.png', label: 'x60000', diamonds: 60000, price: 904 },
+        { img: 'images/gift_shield_purple.png', label: 'x23 Days', diamonds: 7360, price: 904 },
+        { img: 'images/gift_shield_blue.png', label: 'x3 Days', diamonds: 1875, price: 180 },
+
+        // Row 2 (Gifts)
+        { img: 'images/gift_couple_kiss.png', label: 'Gift x1', diamonds: 3777, price: 345 },
+        { img: 'images/gift_motorcycle.png', label: 'Gift x2', diamonds: 5554, price: 900 },
+        { img: 'images/gift_white_dress.png', label: 'Gift x2', diamonds: 2598, price: 299 },
+        
+        // Row 3 (Motorcycle)
+        { img: 'images/gift_motorbike_red.png', label: 'Gift x2', diamonds: 1798, price: 180 },
     ];
-
-    if (!currentUser) {
-        window.location.href = '/';
-        alert('Please login first.');
-    } else {
-        document.getElementById('currentDiamondBalance').textContent = currentUser.diamonds;
-    }
-
-    function renderPlans() {
-        const grid = document.getElementById('plansGrid');
-        DIAMOND_PLANS.forEach(plan => {
-            const totalDiamonds = plan.diamonds + plan.bonus;
-            const card = document.createElement('div');
-            card.className = 'plan-card';
-            card.setAttribute('data-id', plan.id);
-            card.innerHTML = `
-                <h3>${totalDiamonds} 💎</h3>
-                <p>(${plan.diamonds} + ${plan.bonus} Bonus)</p>
-                <button>Buy Now: ₹ ${plan.price}</button>
-            `;
-            card.onclick = () => selectPlan(plan);
-            grid.appendChild(card);
-        });
-    }
     
-    function selectPlan(plan) {
-        document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
-        document.querySelector(`.plan-card[data-id="${plan.id}"]`).classList.add('selected');
-        
-        selectedPlan = plan;
-        
-        document.getElementById('diamondAmountDisplay').value = (plan.diamonds + plan.bonus) + ' Diamonds';
-        document.getElementById('paidAmountDisplay').value = '₹ ' + plan.price;
-        document.getElementById('submitButton').disabled = false;
-    }
+    // --- Rendering Logic ---
 
-    function previewScreenshot(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById('previewImage');
-        if (file) {
-            preview.src = URL.createObjectURL(file);
-            preview.style.display = 'block';
-        } else {
-            preview.src = '';
-            preview.style.display = 'none';
-        }
-    }
-
-    document.getElementById('rechargeForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    document.addEventListener('DOMContentLoaded', () => {
+        const giftPackGrid = document.getElementById('giftPackGrid');
         
-        if (!selectedPlan) {
-            alert('Please select a diamond package first.');
-            return;
-        }
-
-        const utrNumber = document.getElementById('utrNumber').value.trim();
-        const screenshotFile = document.getElementById('screenshotFile').files[0];
-        
-        if (utrNumber.length < 10) {
-            alert('Please enter a valid UTR/Transaction ID (usually 12-14 digits).');
-            return;
-        }
-        
-        document.getElementById('submitButton').disabled = true;
-        document.getElementById('submissionMessage').textContent = 'Submitting request... Please wait.';
-
-        const formData = new FormData();
-        formData.append('username', currentUser.username);
-        formData.append('paidAmount', selectedPlan.price);
-        formData.append('diamondAmount', selectedPlan.diamonds + selectedPlan.bonus);
-        formData.append('utrNumber', utrNumber);
-        formData.append('screenshot', screenshotFile); // 'screenshot' is the field name used by multer in server.js
-
-        try {
-            const response = await fetch('/api/recharge/request', {
-                method: 'POST',
-                body: formData 
+        rechargePackages.forEach(pkg => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'gift-item';
+            itemDiv.innerHTML = `
+                <img src="${pkg.img}" alt="${pkg.label}">
+                <p>${pkg.label}</p>
+                <p class="diamond-cost">${pkg.diamonds} 💎</p>
+                <button class="price-button">Only INR ${pkg.price}</button>
+            `;
+            // Add a click listener for actual recharge logic (not implemented here)
+            itemDiv.addEventListener('click', () => {
+                alert(`Preparing to purchase ${pkg.label} for INR ${pkg.price}`);
             });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                document.getElementById('submissionMessage').textContent = '✅ Recharge request submitted! Verification pending.';
-                document.getElementById('rechargeForm').reset();
-                document.getElementById('previewImage').style.display = 'none';
-                document.getElementById('submitButton').disabled = true;
-                selectedPlan = null;
-                document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
-                
-            } else {
-                document.getElementById('submissionMessage').textContent = '❌ Submission Failed: ' + data.message;
-                document.getElementById('submitButton').disabled = false;
-            }
-
-        } catch (error) {
-            document.getElementById('submissionMessage').textContent = '❌ Network Error. Please try again.';
-            document.getElementById('submitButton').disabled = false;
-            console.error('Recharge submission error:', error);
-        }
+            giftPackGrid.appendChild(itemDiv);
+        });
     });
 
-    renderPlans();
 </script>
 </body>
-                    </html>
-                    
+</html>
