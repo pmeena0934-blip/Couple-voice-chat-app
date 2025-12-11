@@ -3,42 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Rooms</title>
+    <title>Rooms - Party</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
-    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
 
-    <header class="rooms-page-header">
-        <h1 id="welcome-message">Welcome!</h1>
-        <button id="logout" class="logout-btn">Logout</button>
+    <header class="rooms-header">
+        <div id="welcomeMsg">Welcome, Guest!</div>
+        <div class="header-nav">
+            <button class="header-nav-btn active">Related</button>
+            <button class="header-nav-btn">Explore</button>
+            <button class="header-nav-btn">Event</button>
+            <button class="header-nav-btn">Disc</button>
+            <button class="header-nav-btn"><i class="fas fa-search"></i></button>
+        </div>
+        <div class="banner-section">
+            <img src="banner_placeholder.jpg" alt="Midnight Favor" class="banner-img">
+            <div class="category-pills">
+                <div class="pill ranking">Ranking</div>
+                <div class="pill game">Game</div>
+                <div class="pill family">Family</div>
+            </div>
+        </div>
+        <div class="sub-nav">
+            <button class="sub-nav-btn active">Recommend</button>
+            <button class="sub-nav-btn">New</button>
+            <button class="sub-nav-btn">Game</button>
+            <button class="sub-nav-btn">Blind date</button>
+        </div>
     </header>
 
-    <div id="rooms-container">
-        <p id="loading-message">Loading rooms...</p>
+    <div class="room-list-container" id="roomList">
+        <p id="loadingMsg">Loading rooms...</p>
     </div>
-
-    <button id="create-room-btn">+ Create New Room</button>
 
     <div id="createRoomModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Create Your Room</h2>
-            <form id="createRoomForm">
-                <input type="text" id="roomName" placeholder="Enter Room Name" required>
-                <select id="roomType">
-                    <option value="true">Public</option>
-                    <option value="false">Private</option>
-                </select>
-                <button type="submit" class="create-room-submit-btn">Create Room</button>
-            </form>
-            <p id="room-creation-error" class="error-message-modal"></p>
+            <span class="close-btn">&times;</span>
+            <h3>Create Your Room</h3>
+            <input type="text" id="roomNameInput" placeholder="Room ka shirsak.">
+            <p id="roomErrorMsg" class="error-message"></p>
+            <button id="createStandardBtn" class="create-btn standard-btn">Create Standard Room</button>
+            <button id="createVipBtn" class="create-btn vip-btn">Create VIP Room (30 Diamonds)</button>
         </div>
     </div>
-    
+
+    <button id="openModalBtn" class="floating-btn"><i class="fas fa-plus"></i> Create New Room</button>
+
     <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
+        <a href="home_feed.html" class="nav-item">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </a>
@@ -57,143 +71,145 @@
     </div>
 
     <script>
-        // API_URL को अपनी Render URL से बदलें
-        const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
-        const roomsContainer = document.getElementById('rooms-container');
-        const welcomeMessage = document.getElementById('welcome-message');
-        const logoutButton = document.getElementById('logout');
-        const loadingMessage = document.getElementById('loading-message');
-
-        const createRoomBtn = document.getElementById('create-room-btn');
+        const roomListContainer = document.getElementById('roomList');
+        const welcomeMsg = document.getElementById('welcomeMsg');
+        const loadingMsg = document.getElementById('loadingMsg');
         const modal = document.getElementById('createRoomModal');
-        const closeModal = document.getElementsByClassName('close')[0];
-        const createRoomForm = document.getElementById('createRoomForm');
-        const roomCreationError = document.getElementById('room-creation-error');
+        const openModalBtn = document.getElementById('openModalBtn');
+        const closeModalBtn = document.querySelector('.modal-content .close-btn');
+        const roomNameInput = document.getElementById('roomNameInput');
+        const createStandardBtn = document.getElementById('createStandardBtn');
+        const createVipBtn = document.getElementById('createVipBtn');
+        const roomErrorMsg = document.getElementById('roomErrorMsg');
 
-        let currentUser = null;
+        let currentUsername = '';
 
-        function initRoomsPage() {
+        function checkLogin() {
             const userData = localStorage.getItem('currentUserData');
-            const username = localStorage.getItem('currentUsername');
-
-            if (!userData || !username) {
-                alert('You must be logged in to view rooms.');
-                window.location.href = 'index.html';
-                return;
+            if (userData) {
+                const user = JSON.parse(userData);
+                currentUsername = user.username;
+                welcomeMsg.textContent = `Welcome, ${currentUsername}!`;
+                document.title = `Rooms - ${currentUsername}`;
+                fetchRooms();
+            } else {
+                window.location.href = 'index.html'; // Redirect to login if not logged in
             }
-
-            currentUser = JSON.parse(userData);
-            welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
-            
-            const socket = io(API_URL);
-            socket.on('connect', () => {
-                socket.emit('register_socket', currentUser.username);
-            });
-
-            loadRooms();
         }
 
-        async function loadRooms() {
-            loadingMessage.style.display = 'block';
-            roomsContainer.innerHTML = ''; 
-
+        async function fetchRooms() {
+            loadingMsg.textContent = 'Loading rooms...';
             try {
-                const response = await fetch(`${API_URL}/api/rooms`);
-                
-                // Server might send HTML error page instead of JSON (Render sleep issue)
-                const text = await response.text();
-                if (text.startsWith('<')) {
-                    throw new Error('Server sent HTML instead of JSON. Server likely sleeping.');
-                }
-                
-                const data = JSON.parse(text);
+                const response = await fetch('/api/rooms');
+                const data = await response.json();
 
                 if (data.success) {
-                    loadingMessage.style.display = 'none';
-                    if (data.rooms.length === 0) {
-                        roomsContainer.innerHTML = '<p>No rooms found. Be the first to create one!</p>';
-                    } else {
-                        renderRooms(data.rooms);
-                    }
+                    renderRooms(data.rooms);
                 } else {
-                    alert(`Failed to load rooms: ${data.message}`);
-                    roomsContainer.innerHTML = '<p class="error-message">Failed to load rooms. Check server logs.</p>';
+                    alert('Failed to load rooms.');
+                    loadingMsg.textContent = 'Failed to load rooms.';
                 }
             } catch (error) {
-                console.error('Network error loading rooms:', error);
-                alert('Failed to load rooms. Please refresh the page. Server might be sleeping.');
-                roomsContainer.innerHTML = `<p class="error-message">NETWORK ERROR. Failed to load rooms: ${error.message}</p>`;
+                alert('Failed to load rooms.');
+                loadingMsg.textContent = 'Failed to load rooms.';
+                console.error("Fetch Rooms Error:", error);
             }
         }
 
         function renderRooms(rooms) {
+            roomListContainer.innerHTML = '';
+            
+            // Add static user recommendation section (as seen in 1000080673.jpg)
+            const recommendHTML = `
+                <h3 style="padding: 10px 15px;">Recommend user in the room</h3>
+                <div class="user-recommend-row">
+                    <div class="user-pill"><img src="user_1.jpg" alt="User" class="user-avatar"> Lovely...</div>
+                    <div class="user-pill"><img src="user_2.jpg" alt="User" class="user-avatar"> Sonam</div>
+                    <div class="user-pill"><img src="user_3.jpg" alt="User" class="user-avatar"> Ava <span class="bonus">Bonus</span></div>
+                </div>
+                <p style="padding: 10px 15px; color: #999; font-size: 0.9em;">No bakwaas batein no battamizi</p>
+                <h3 style="padding: 10px 15px; margin-top: 20px;">Rooms List</h3>
+            `;
+            roomListContainer.innerHTML += recommendHTML;
+
+            if (rooms.length === 0) {
+                roomListContainer.innerHTML += '<p style="padding: 15px;">No rooms found. Time to create the first one!</p>';
+                return;
+            }
+
             rooms.forEach(room => {
-                const roomCard = document.createElement('div');
-                roomCard.className = 'room-card';
-                roomCard.dataset.roomId = room.id;
-                roomCard.innerHTML = `
+                const isVip = room.isVip;
+                const card = document.createElement('div');
+                card.className = 'room-card';
+                
+                // Clicking the card takes you to the live room page (which is just a layout for now)
+                card.onclick = () => window.location.href = `live_room.html?roomId=${room.id}`; 
+                
+                card.innerHTML = `
+                    <div class="room-left-bar" style="background-color: ${isVip ? '#9370DB' : '#5F9EA0'};"></div>
                     <div class="room-info">
-                        <h3>${room.name} (${room.isPublic ? 'Public' : 'Private'})</h3>
-                        <p>Owner: ${room.owner}</p>
+                        <h4>${room.name} ${isVip ? '<i class="fas fa-crown vip-icon"></i>' : ''}</h4>
+                        <p class="room-owner">Owner: ${room.owner}</p>
                     </div>
-                    <div class="room-details">
-                        <span>${room.liveCount}</span>
-                        <p>Members</p>
+                    <div class="room-stats">
+                        <i class="fas fa-heart" style="color: #ff69b4;"></i>
+                        <span class="member-count">${room.currentMembers}</span>
+                        <span class="label">Members</span>
                     </div>
                 `;
-                roomCard.addEventListener('click', () => joinRoom(room.id));
-                roomsContainer.appendChild(roomCard);
+                roomListContainer.appendChild(card);
             });
         }
 
-        function joinRoom(roomId) {
-            alert(`Joining room: ${roomId}.`);
-            // window.location.href = `room.html?id=${roomId}`; 
-        }
-
-        logoutButton.addEventListener('click', () => {
-            localStorage.removeItem('currentUsername');
-            localStorage.removeItem('currentUserData');
-            window.location.href = 'index.html';
-        });
-
-        // Modal and Form Logic (Same as before)
-        createRoomBtn.onclick = function() { modal.style.display = "block"; }
-        closeModal.onclick = function() { modal.style.display = "none"; roomCreationError.textContent = ''; }
-        window.onclick = function(event) {
-            if (event.target == modal) { modal.style.display = "none"; roomCreationError.textContent = ''; }
-        }
-
-        createRoomForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            roomCreationError.textContent = ''; 
-
-            const roomName = document.getElementById('roomName').value;
-            const roomType = document.getElementById('roomType').value;
+        async function createRoom(isVip) {
+            const roomName = roomNameInput.value.trim();
+            roomErrorMsg.textContent = '';
             
+            if (!roomName) {
+                roomErrorMsg.textContent = 'Please enter a room name.';
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}/api/rooms/create`, {
+                const response = await fetch('/api/create-room', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: roomName, ownerUsername: currentUser.username, isPublic: roomType }),
+                    body: JSON.stringify({ roomName, isVip, username: currentUsername })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    alert(`Room "${data.room.name}" created!`);
-                    modal.style.display = "none";
-                    document.getElementById('roomName').value = ''; 
-                    loadRooms(); // Reload room list
+                    alert('Room created successfully: ' + data.room.name);
+                    modal.style.display = 'none';
+                    roomNameInput.value = '';
+                    fetchRooms(); // Refresh the list
+                    // Optionally, redirect to the new room
+                    window.location.href = `live_room.html?roomId=${data.room.id}`; 
                 } else {
-                    roomCreationError.textContent = 'Server error during room creation: ' + data.message;
+                    roomErrorMsg.textContent = `Server error during room creation: ${data.message}`;
                 }
             } catch (error) {
-                roomCreationError.textContent = 'NETWORK ERROR: Could not connect to server.';
+                roomErrorMsg.textContent = `Server error during room creation. Full Error: ${error.message}`;
+                console.error("Create Room Error:", error);
             }
-        });
+        }
+        
+        // Modal Events
+        openModalBtn.onclick = () => modal.style.display = 'block';
+        closeModalBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        };
 
-        initRoomsPage();
+        // Button Events
+        createStandardBtn.onclick = () => createRoom(false);
+        createVipBtn.onclick = () => createRoom(true);
+
+        document.addEventListener('DOMContentLoaded', checkLogin);
     </script>
 </body>
-</html>
+                </html>
+    
