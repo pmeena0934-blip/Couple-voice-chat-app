@@ -4,47 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Store</title>
-    <script src="/socket.io/socket.io.js"></script>
-</head>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+    </head>
 <body>
-<script>
-    // **CRITICAL FIX:** API URL Stability
-    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
-    const socket = io({ transports: ['websocket', 'polling'] }); 
 
-    // --- Store Logic ---
-    async function loadStoreItems() {
-        try {
-            // FIX: Using API_URL for correct API access
-            const response = await fetch(`${API_URL}/api/store/items`); 
-            const data = await response.json();
+    <header class="store-header">
+        <a href="mine.html" style="color: #333;"><i class="fas fa-arrow-left"></i></a>
+        <h2>Store</h2>
+        <div class="balance-stats">
+            <span class="coin-icon">💰 <span id="userCoins">0</span></span>
+            <span class="diamond-icon">💎 <span id="userDiamonds">0</span></span>
+        </div>
+    </header>
 
-            if (data.success) {
-                renderStoreItems(data.items);
+    <div class="category-nav">
+        <div class="category-item active">Chat frame</div>
+        <div class="category-item">Avatar frame</div>
+        <div class="category-item">Enter effect</div>
+        <div class="category-item">Enter message</div>
+        <div class="category-item">Ripple</div>
+    </div>
+
+    <div class="store-tabs">
+        <button class="store-tab-btn active" id="userCarTab">User Car</button>
+        <button class="store-tab-btn" id="pairCarTab">Pair Car</button>
+    </div>
+
+    <div id="store-content" class="item-grid">
+        </div>
+
+    <div class="bottom-nav">
+        <a href="home_feed.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="rooms.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Party</span>
+        </a>
+        <a href="chat.html" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Chat</span>
+        </a>
+        <a href="mine.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Mine</span>
+        </a>
+    </div>
+
+    <script>
+        const storeContent = document.getElementById('store-content');
+        const userCarTab = document.getElementById('userCarTab');
+        const pairCarTab = document.getElementById('pairCarTab');
+        const userDiamonds = document.getElementById('userDiamonds');
+        const userCoins = document.getElementById('userCoins');
+
+        const userCarItems = [
+            { name: "Super Rolls-Royce", price: 17280, duration: "1 Day", img: 'car_rolls.png' }, // Placeholder images
+            { name: "Soul Car", price: 4800, duration: "1 Day", img: 'car_soul.png' },
+            { name: "Gulfstream One", price: 4800, duration: "1 Day", img: 'jet.png' },
+            { name: "Hat Bird", price: 17280, duration: "1 Day", img: 'hat_bird.png' },
+        ];
+
+        const pairCarItems = [
+            { name: "Luxury Love", price: 233280, duration: "1 Day", img: 'yacht.png', notForSale: true },
+            { name: "Lamborghini", price: 17280, duration: "1 Day", img: 'car_lambo.png' },
+        ];
+
+        function loadBalance() {
+            const userData = localStorage.getItem('currentUserData');
+            if (userData) {
+                const user = JSON.parse(userData);
+                userDiamonds.textContent = user.diamonds || 0;
+                userCoins.textContent = user.coins || 0;
             } else {
-                console.error("Failed to load store items:", data.message);
+                window.location.href = 'index.html'; 
             }
-        } catch (error) {
-            console.error("Store API Error:", error);
-            // Handle error, maybe show placeholder items
         }
-    }
 
-    function renderStoreItems(items) {
-        const userCarContainer = document.getElementById('userCarContainer');
-        userCarContainer.innerHTML = '';
-        
-        items.filter(item => item.type !== 'pair_car').forEach(item => {
-            // FIX: Using correct path for images
-            const imageUrl = `${API_URL}${item.img}`; 
-            
-            // ... (HTML rendering logic for store items here) ...
-        });
-    }
+        function renderItems(items) {
+            storeContent.innerHTML = '';
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'store-item-card';
+                
+                const purchaseButton = item.notForSale 
+                    ? `<button class="purchase-btn" disabled style="background-color: #ccc;">Not For Sale</button>`
+                    : `<button class="purchase-btn">Purchase</button>`;
 
-    // Load store items when the page starts
-    loadStoreItems();
-</script>
+                card.innerHTML = `
+                    <img src="${item.img}" alt="${item.name}" class="item-image">
+                    <h4>${item.name}</h4>
+                    <p class="price-tag">💎 ${item.price}</p>
+                    <p style="font-size:0.8em; color:#999;">${item.duration}</p>
+                    ${purchaseButton}
+                `;
+                storeContent.appendChild(card);
+            });
+        }
 
+        function switchTab(isUserCar) {
+            userCarTab.classList.remove('active');
+            pairCarTab.classList.remove('active');
+
+            if (isUserCar) {
+                userCarTab.classList.add('active');
+                renderItems(userCarItems);
+            } else {
+                pairCarTab.classList.add('active');
+                renderItems(pairCarItems);
+            }
+        }
+
+        userCarTab.addEventListener('click', () => switchTab(true));
+        pairCarTab.addEventListener('click', () => switchTab(false));
+
+        loadBalance();
+        switchTab(true); // Load User Car items by default
+    </script>
 </body>
 </html>
