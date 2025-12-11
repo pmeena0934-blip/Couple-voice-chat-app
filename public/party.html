@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party / Discover</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css"> 
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* Specific CSS for the Discover/Party Page */
+        .header-tabs {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            background-color: #ffffff;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .header-tabs button {
+            background: none;
+            border: none;
+            color: #777;
+            font-size: 1.1em;
+            font-weight: 500;
+            padding: 5px 15px;
+            cursor: pointer;
+        }
+        .header-tabs button.active {
+            color: #ff3366; /* Primary Color */
+            border-bottom: 3px solid #ff3366;
+            font-weight: bold;
+        }
+        .banner-container {
+            padding: 10px;
+            overflow: hidden;
+        }
+        .banner-container img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 0 10px 20px;
+            text-align: center;
+        }
+        .category-item {
+            background-color: #ffffff;
+            padding: 15px 5px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-tabs">
+        <button class="active">Related</button>
+        <button>Explore</button>
+        <button>Event</button>
+        <button>Discover</button>
+        <button><i class="fas fa-search"></i></button>
+    </div>
+
+    <div class="main-content">
+        
+        <div class="banner-container">
+            <img src="images/midnight_recharge_pack.jpg" alt="Midnight Recharge Pack" id="midnightRechargeBanner">
+            <img src="images/super_premium_sale.jpg" alt="Super Premium Sale">
+            <img src="images/crystal_sanctuary.jpg" alt="Crystal Sanctuary">
+        </div>
+
+        <div class="category-grid">
+            <div class="category-item">Ranking</div>
+            <div class="category-item">Game</div>
+            <div class="category-item">Family</div>
+            <div class="category-item">Recommend</div>
+            <div class="category-item">New</div>
+            <div class="category-item">Blind Date</div>
+        </div>
+
+        </div>
+
+<script>
+    const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
+    const socket = io({ transports: ['websocket', 'polling'] }); 
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const rechargeBanner = document.getElementById('midnightRechargeBanner');
+        
+        // When the user clicks the banner, redirect to the Recharge Page
+        rechargeBanner.addEventListener('click', () => {
+            window.location.href = 'recharge.html'; 
+        });
+        
+        // Basic navigation logic for the header tabs
+        const headerTabs = document.querySelectorAll('.header-tabs button');
+        headerTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                headerTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                // In a real app, this would load different room lists
+                if (tab.textContent.includes('Explore')) {
+                    // Redirect to rooms.html for room lists
+                    // window.location.href = 'rooms.html'; 
+                }
+            });
+        });
+    });
+
+</script>
+</body>
+</html>
