@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Voice Room</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    </head>
+<body class="live-room-body">
+
+    <header class="room-header">
+        <button onclick="window.location.href='rooms.html'" class="back-btn"><i class="fas fa-arrow-left"></i></button>
+        <span class="room-id">Room ID: 17000</span>
+        <button class="follow-btn"><i class="fas fa-plus"></i></button>
+    </header>
+
+    <div class="room-content-container">
+        
+        <div class="owner-slot-area">
+            <div class="voice-slot owner-slot">
+                <img src="https://picsum.photos/id/101/200/200" alt="Owner" class="slot-image owner-image">
+                <span class="slot-name">Owner Name</span>
+                <span class="slot-level">Lv.30</span>
+                <div class="owner-frame"></div>
+            </div>
+        </div>
+
+        <div class="voice-slots-grid">
+            <div class="voice-slot filled-slot"><img src="https://picsum.photos/id/102/200/200" class="slot-image"><span class="slot-name">User 2</span><span class="slot-number-tag">2</span></div>
+            <div class="voice-slot filled-slot"><img src="https://picsum.photos/id/103/200/200" class="slot-image"><span class="slot-name">User 3</span><span class="slot-number-tag">3</span></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">4</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">5</div><i class="fas fa-plus-circle"></i></div>
+            
+            <div class="voice-slot empty-slot"><div class="slot-number">6</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">7</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">8</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">9</div><i class="fas fa-plus-circle"></i></div>
+            
+            <div class="voice-slot empty-slot"><div class="slot-number">10</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">11</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">12</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">13</div><i class="fas fa-plus-circle"></i></div>
+
+            <div class="voice-slot empty-slot"><div class="slot-number">14</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">15</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">16</div><i class="fas fa-plus-circle"></i></div>
+            <div class="voice-slot empty-slot"><div class="slot-number">17</div><i class="fas fa-plus-circle"></i></div>
+        </div>
+
+        <div class="room-bottom-controls">
+            <div class="control-left">
+                <button class="control-btn"><i class="fas fa-microphone"></i></button>
+                <button class="control-btn"><i class="fas fa-comment-dots"></i></button>
+            </div>
+            <div class="control-right">
+                <div class="pk-ranking">
+                    <h4>Gift PK</h4>
+                </div>
+                <button class="gift-btn"><i class="fas fa-gift"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Simple script to display room ID from URL
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomId = urlParams.get('roomId') || '17000';
+            document.querySelector('.room-id').textContent = `Room ID: ${roomId}`;
+        });
+    </script>
+</body>
+  </html>
+  
