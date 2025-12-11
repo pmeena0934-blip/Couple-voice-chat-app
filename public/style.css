@@ -1,239 +1,218 @@
-/* public/style.css - UPGRADED FINAL UI */
-
-/* --- Global Styles --- */
-body {
-    background-color: #1a1a2e; /* Dark theme background */
-    color: #f4f4f9;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* General Resets and Base Styles */
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
 }
 
-/* --- App Container & Layout --- */
-.app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    max-width: 450px;
-    margin: 0 auto;
-    position: relative;
-    background-image: linear-gradient(to top, #1a1a2e 0%, #2a0a3e 100%); /* Deep Purple/Dark Gradient */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    overflow: hidden; /* For full screen effect */
+body {
+    background-color: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
 }
 
-/* --- Header --- */
-.room-header {
+/* --- Global Header/Navigation --- */
+header {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.5);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     position: sticky;
     top: 0;
-    z-index: 10;
-}
-.room-header h3 {
-    margin: 0;
-    color: #ffb700; /* Gold/Yellow for title */
-    font-size: 18px;
-    font-weight: 600;
-}
-.live-badge {
-    background-color: #e74c3c;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 15px;
-    font-size: 12px;
-    font-weight: bold;
-    animation: pulse 1.5s infinite;
+    z-index: 100;
 }
 
-/* --- Host & Seats Grid --- */
-.host-area {
-    display: flex;
-    justify-content: center;
-    padding: 30px 0 20px;
-}
-.seats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 10px;
-    padding: 0 10px;
-    flex-grow: 1;
-}
-
-/* --- Individual Seat Styles (Includes Level and Frame) --- */
-.seat {
-    text-align: center;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 10px 0;
-}
-
-/* --- Avatar & Frame Container (Gold Frame Effect) --- */
-.avatar-container {
-    position: relative;
-    padding: 5px; 
-    border-radius: 50%;
-    /* यह गोल्ड फ्रेम इफेक्ट है */
-    background: linear-gradient(45deg, #ffd700, #ff8c00, #ffd700); 
-    box-shadow: 0 0 20px rgba(255, 183, 0, 0.8);
-    transition: transform 0.3s ease;
-}
-.host-seat .avatar-container {
-    padding: 8px; /* Host के लिए बड़ा फ्रेम */
-}
-.avatar {
-    border: 5px solid #1a1a2e; /* Frame को avatar-container से अलग करने के लिए */
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    display: block;
-}
-.host-seat .avatar {
-    width: 100px;
-    height: 100px;
-}
-
-/* --- Level Info (Top of Avatar) --- */
-.level-info {
-    position: absolute;
-    top: 0px; 
+/* --- Bottom Navigation Bar --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
     width: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 5;
+    justify-content: space-around;
+    padding: 8px 0;
+    z-index: 1000;
 }
-.level-badge {
-    background-color: #ff69b4; /* Pink/Red background */
-    color: white;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: bold;
-    border: 1px solid white;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
+
+.nav-item {
+    text-align: center;
+    color: #aaa;
+    transition: color 0.3s;
+}
+
+.nav-item.active {
+    color: #ff69b4; /* Pink active color */
+}
+
+.nav-item i {
+    font-size: 20px;
+    display: block;
     margin-bottom: 2px;
 }
 
-/* --- XP Bar --- */
-.xp-bar-container {
-    width: 70%;
-    height: 4px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
-    overflow: hidden;
-}
-.xp-bar {
-    height: 100%;
-    background: linear-gradient(to right, #2ecc71, #3498db); /* Green to Blue */
-    width: 0%; /* JS will update this */
-    border-radius: 5px;
-    transition: width 0.5s ease;
+.nav-item span {
+    font-size: 10px;
 }
 
-/* --- Mic Icon (Bottom of Avatar) --- */
-.mic-icon {
-    position: absolute;
-    bottom: 25px; 
-    background-color: #2ecc71; 
-    color: white;
-    border-radius: 50%;
-    padding: 5px;
-    font-size: 16px;
-    border: 2px solid white;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.mic-icon.active {
-    opacity: 1;
-    animation: mic-glow 1s infinite alternate;
-}
-@keyframes mic-glow {
-    from { box-shadow: 0 0 8px #2ecc71; }
-    to { box-shadow: 0 0 15px #2ecc71; }
-}
 
-/* --- Username --- */
-.username {
-    margin-top: 8px;
-    font-size: 14px;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
-    font-weight: 500;
-}
-
-/* --- Empty Seats --- */
-.empty-seat span {
-    display: inline-block;
-    width: 70px;
-    height: 70px;
-    border: 2px dashed #4a4a6b;
-    border-radius: 50%;
-    line-height: 66px;
-    font-size: 40px;
-    color: #4a4a6b;
-    cursor: pointer;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-/* --- Footer Controls --- */
-.footer-controls {
+/* --- Login Page Specific Styles (index.html) --- */
+.login-container {
     display: flex;
-    justify-content: space-around;
-    padding: 15px 10px;
-    background: rgba(0, 0, 0, 0.8);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
-    width: 100%;
-    box-sizing: border-box;
-    z-index: 20;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #f0f2f5 0%, #fff0f5 100%);
 }
-.btn {
-    background-color: #ff69b4;
+
+.login-box {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
+}
+
+.login-box h2 {
+    color: #333;
+    margin-bottom: 25px;
+}
+
+.login-box input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #ff69b4; 
+    color: white;
+}
+
+.error-message {
+    background-color: #ffe0e0;
+    color: #cc0000;
+    border: 1px solid #cc0000;
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+/* --- Rooms/Party Page Styles (rooms.html) --- */
+
+.rooms-page-header {
+    background-color: #ffffff;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+#rooms-container {
+    padding: 20px;
+    padding-bottom: 70px; 
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.room-card {
+    background: linear-gradient(135deg, #fff 0%, #f7f7ff 100%);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #6a5acd; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.room-card h3 {
+    margin: 0;
+    color: #6a5acd;
+    font-size: 1.1em;
+}
+
+.room-card p {
+    margin: 5px 0 0;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.room-details {
+    text-align: right;
+}
+.room-details span {
+    display: block;
+    font-weight: bold;
+    color: #ff69b4;
+}
+
+/* --- Create Room Button and Modal Styles --- */
+#create-room-btn {
+    position: fixed;
+    bottom: 80px; 
+    right: 20px;
+    background-color: #28a745;
     color: white;
     border: none;
-    padding: 10px 18px;
-    border-radius: 25px;
+    padding: 15px 20px;
+    border-radius: 50px;
+    font-size: 1em;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background-color 0.3s;
-}
-.gift-btn {
-    background-color: #3498db; 
-}
-.btn:hover {
-    filter: brightness(1.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* Notification Area (for chat messages/gifts) */
-#notification-area {
-    position: absolute;
-    bottom: 60px; /* Above footer */
-    left: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-    width: 80%;
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
 }
-#notification-area div {
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px 10px;
-    margin-bottom: 5px;
-    border-radius: 10px;
-    font-size: 13px;
-    animation: fadein 0.5s;
+
+.modal-content {
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 25px;
+    border-radius: 15px;
+    width: 85%;
+    max-width: 400px;
+    text-align: center;
 }
-@keyframes fadein {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
+
+.modal-content input, .modal-content select {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.create-room-submit-btn {
+    background-color:#ff69b4; 
+    color:white; 
+    border:none; 
+    padding:10px 20px; 
+    border-radius:5px; 
+    margin-top:10px;
     }
+        
