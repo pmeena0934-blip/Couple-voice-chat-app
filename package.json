@@ -4,7 +4,7 @@
   "description": "Achat-style voice chat application clone",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js" 
   },
   "dependencies": {
     "express": "^4.18.2",
