@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
+
 // Socket.IO configuration for stability on Render
 const io = socketIo(server, {
     cors: {
@@ -17,12 +18,9 @@ const io = socketIo(server, {
 
 // --- Configuration and Setup ---
 
-// Use environment variable PORT provided by Render, or default to 3000
 const PORT = process.env.PORT || 3000; 
-// Use the live URL for client-side connection (important for stability)
-const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
-// Global data store (in-memory for simplicity, use MongoDB for production)
+// Global data store (in-memory)
 let users = {};
 let rooms = {};
 let roomCounter = 10000; 
@@ -40,16 +38,15 @@ function createNewUser(username, password) {
         contribution: 0,
         profilePic: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 20),
         socketId: null,
-        following: new Set(), // Users this person follows
-        followers: new Set()  // Users who follow this person
+        following: new Set(), 
+        followers: new Set()  
     };
 }
 
-// Initialize test user for quick testing
+// Initialize test users
 if (!users['Meena9090']) {
     users['Meena9090'] = createNewUser('Meena9090', 'test1234');
     users['cjgjj'] = createNewUser('cjgjj', 'test1234');
-    // Set a different test user profile for follow testing
     users['testuser'] = createNewUser('testuser', 'test1234'); 
 }
 
@@ -65,7 +62,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Ensure the directory is correct for Render deployment
+        // Ensure the directory is correct
         cb(null, 'public/uploads/'); 
     },
     filename: (req, file, cb) => {
@@ -74,7 +71,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Create the uploads directory if it doesn't exist (Important for Render)
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -84,7 +80,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // --- API Routes ---
 
-// 1. Root/Home Route
+// 1. Root/Home Route (Serve the login page)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -95,15 +91,12 @@ app.post('/api/user/login', (req, res) => {
     let user = users[username];
 
     if (!user) {
-        // Register New User
         user = createNewUser(username, password);
         users[username] = user;
-        console.log(`New user registered: ${username}`);
     } else if (user.password !== password) {
         return res.status(401).json({ success: false, message: 'Incorrect password.' });
     }
     
-    // Convert Set to Array for safe JSON transfer
     const userData = { 
         ...user, 
         following: Array.from(user.following || []),
@@ -117,7 +110,7 @@ app.post('/api/user/login', (req, res) => {
     });
 });
 
-// 3. Get User Data (e.g., when loading profile page)
+// 3. Get User Data
 app.get('/api/user/:username', (req, res) => {
     const { username } = req.params;
     const user = users[username];
@@ -126,7 +119,6 @@ app.get('/api/user/:username', (req, res) => {
         return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    // Convert Set to Array for safe JSON transfer
     const userData = { 
         ...user, 
         following: Array.from(user.following || []),
@@ -147,8 +139,6 @@ app.post('/api/user/profile/update/pic', upload.single('profilePic'), (req, res)
     }
     
     if (req.file) {
-        // Update user's profile pic URL
-        // Use the relative path for the client
         user.profilePic = `/uploads/${req.file.filename}`; 
         
         res.json({ 
@@ -162,7 +152,8 @@ app.post('/api/user/profile/update/pic', upload.single('profilePic'), (req, res)
 });
 
 
-// 5. Create Room
+// 5. Room Management (Create, List, Get Single)
+
 app.post('/api/rooms/create', (req, res) => {
     const { roomName, ownerUsername } = req.body;
     const owner = users[ownerUsername];
@@ -177,7 +168,7 @@ app.post('/api/rooms/create', (req, res) => {
         name: roomName,
         owner: ownerUsername,
         members: [ownerUsername],
-        mics: Array(10).fill(null), // 10 Mic slots
+        mics: Array(10).fill(null), 
         isLocked: false,
         type: 'Public' 
     };
@@ -186,14 +177,11 @@ app.post('/api/rooms/create', (req, res) => {
     res.json({ success: true, room: newRoom });
 });
 
-// 6. Get All Rooms
 app.get('/api/rooms', (req, res) => {
-    // Convert rooms object to array of values
     const roomList = Object.values(rooms);
     res.json({ success: true, rooms: roomList });
 });
 
-// 7. Get Single Room Data
 app.get('/api/rooms/:roomId', (req, res) => {
     const roomId = parseInt(req.params.roomId);
     const room = rooms[roomId];
@@ -206,7 +194,7 @@ app.get('/api/rooms/:roomId', (req, res) => {
 });
 
 
-// 8. Follow / Unfollow User API (NEW FEATURE)
+// 6. Follow / Unfollow User API 
 app.post('/api/user/follow', (req, res) => {
     const { followerUsername, targetUsername, action } = req.body;
     const follower = users[followerUsername];
@@ -216,7 +204,6 @@ app.post('/api/user/follow', (req, res) => {
         return res.json({ success: false, message: 'User not found.' });
     }
     
-    // Helper to get current counts
     const getCounts = (user) => ({
         followers: user.followers ? user.followers.size : 0,
         following: user.following ? user.following.size : 0
@@ -266,20 +253,16 @@ io.on('connection', (socket) => {
         const user = users[username];
 
         if (room && user) {
-            // Add user to room members if not present
             if (!room.members.includes(username)) {
                 room.members.push(username);
             }
             user.socketId = socket.id;
 
-            // Notify everyone in the room
             io.to(roomId).emit('message', { 
                 username: 'System', 
                 text: `${username} has joined the room.`, 
                 type: 'system' 
             });
-
-            // Send updated room state (mics, members)
             io.to(roomId).emit('roomStateUpdate', room);
         }
     });
@@ -289,7 +272,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('message', { username, text, type: 'chat' });
     });
 
-    // Send Gift
+    // Send Gift (Simplified)
     socket.on('sendGift', ({ roomId, sender, receiver, giftName, diamondsCost }) => {
         const room = rooms[roomId];
         const senderUser = users[sender];
@@ -297,20 +280,16 @@ io.on('connection', (socket) => {
         if (room && senderUser && senderUser.diamonds >= diamondsCost) {
             senderUser.diamonds -= diamondsCost;
             
-            // Notify room
             io.to(roomId).emit('message', { 
                 username: 'System', 
                 text: `${sender} sent a ${giftName} to ${receiver || 'the room'}! (Cost: ${diamondsCost}💎)`, 
                 type: 'gift' 
             });
 
-            // Update sender's balance (optional: send income to receiver if applicable)
             socket.emit('updateBalance', { diamonds: senderUser.diamonds, coins: senderUser.coins });
-            
-            // For visual effect: emit a gift notification
             io.to(roomId).emit('giftNotification', { sender, giftName, diamondsCost });
             
-        } else if (senderUser.diamonds < diamondsCost) {
+        } else if (senderUser && senderUser.diamonds < diamondsCost) {
             socket.emit('message', { 
                 username: 'System', 
                 text: `You need ${diamondsCost - senderUser.diamonds} more 💎 to send ${giftName}.`, 
@@ -319,20 +298,13 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Mic Control (e.g., Host setting mic)
+    // Mic Control (Host setting mic)
     socket.on('setMic', ({ roomId, micIndex, username }) => {
         const room = rooms[roomId];
         if (room) {
-            // Basic host control check can be added here
             if (micIndex >= 1 && micIndex <= 10) {
-                // Ensure user is not already on another mic (simple check)
-                room.mics = room.mics.map((micUser, index) => 
-                    micUser === username ? null : micUser
-                );
-                
-                // Set the user to the new mic slot
+                room.mics = room.mics.map((micUser, index) => micUser === username ? null : micUser);
                 room.mics[micIndex - 1] = username; 
-                
                 io.to(roomId).emit('roomStateUpdate', room);
             }
         }
@@ -342,7 +314,6 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('A user disconnected:', socket.id);
         
-        // Find user and remove them from any room
         for (const username in users) {
             if (users[username].socketId === socket.id) {
                 const disconnectedUsername = username;
@@ -350,15 +321,9 @@ io.on('connection', (socket) => {
                 for (const roomId in rooms) {
                     const room = rooms[roomId];
                     if (room.members.includes(disconnectedUsername)) {
-                        // Remove from members
                         room.members = room.members.filter(m => m !== disconnectedUsername);
+                        room.mics = room.mics.map(micUser => micUser === disconnectedUsername ? null : micUser);
                         
-                        // Remove from mic slots
-                        room.mics = room.mics.map(micUser => 
-                            micUser === disconnectedUsername ? null : micUser
-                        );
-                        
-                        // Notify room
                         io.to(roomId).emit('message', { 
                             username: 'System', 
                             text: `${disconnectedUsername} has left the room.`, 
@@ -366,16 +331,15 @@ io.on('connection', (socket) => {
                         });
                         io.to(roomId).emit('roomStateUpdate', room);
 
-                        // If the owner leaves, close the room (simple logic)
                         if (room.owner === disconnectedUsername) {
                             delete rooms[roomId];
                             io.to(roomId).emit('roomClosed', 'Room owner disconnected. The room has been closed.');
                         }
-                        break; // User found and processed, exit inner loop
+                        break;
                     }
                 }
-                users[username].socketId = null; // Clear socket ID
-                break; // User found, exit outer loop
+                users[username].socketId = null; 
+                break;
             }
         }
     });
@@ -385,6 +349,6 @@ io.on('connection', (socket) => {
 // --- Start Server ---
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`Live URL: ${RENDER_URL}`);
     console.log('Application started successfully. Ready for use.');
 });
+                                       
