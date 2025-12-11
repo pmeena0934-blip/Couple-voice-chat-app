@@ -5,129 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice Rooms</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* Minimal CSS for rooms.html layout */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-        }
-        header {
-            background-color: #ff69b4;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        header h1 {
-            margin: 0;
-            font-size: 1.2em;
-        }
-        #logout {
-            background: none;
-            border: 1px solid white;
-            color: white;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        #rooms-container {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .room-card {
-            background-color: white;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            border-left: 5px solid #ff69b4;
-        }
-        .room-card:hover {
-            background-color: #fff0f5;
-        }
-        .room-info h3 {
-            margin: 0 0 5px 0;
-            color: #333;
-        }
-        .room-info p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #666;
-        }
-        #create-room-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 15px 20px;
-            border-radius: 50px;
-            font-size: 1em;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        #create-room-btn:hover {
-            background-color: #218838;
-        }
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 400px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .modal-content input, .modal-content select {
-            width: 90%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <header>
-        <h1 id="welcome-message">Welcome, User!</h1>
-        <button id="logout">Logout</button>
+    <header class="rooms-page-header">
+        <h1 id="welcome-message">Welcome!</h1>
+        <button id="logout" class="logout-btn">Logout</button>
     </header>
 
     <div id="rooms-container">
@@ -146,15 +31,34 @@
                     <option value="true">Public</option>
                     <option value="false">Private</option>
                 </select>
-                <button type="submit" style="background-color:#ff69b4; color:white; border:none; padding:10px 20px; border-radius:5px; margin-top:10px;">Create Room</button>
+                <button type="submit" class="create-room-submit-btn">Create Room</button>
             </form>
-            <p id="room-creation-error" style="color:red; margin-top:10px;"></p>
+            <p id="room-creation-error" class="error-message-modal"></p>
         </div>
     </div>
-
+    
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="rooms.html" class="nav-item active">
+            <i class="fas fa-users"></i>
+            <span>Party</span>
+        </a>
+        <a href="chat.html" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Chat</span>
+        </a>
+        <a href="mine.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Mine</span>
+        </a>
+    </div>
 
     <script>
-        const API_URL = 'https://couple-voice-chat-app.onrender.com'; // **Change this to your actual Render URL**
+        // API_URL को अपनी Render URL से बदलें
+        const API_URL = 'https://couple-voice-chat-app.onrender.com'; 
         const roomsContainer = document.getElementById('rooms-container');
         const welcomeMessage = document.getElementById('welcome-message');
         const logoutButton = document.getElementById('logout');
@@ -168,7 +72,6 @@
 
         let currentUser = null;
 
-        // --- Initialization and User Check ---
         function initRoomsPage() {
             const userData = localStorage.getItem('currentUserData');
             const username = localStorage.getItem('currentUsername');
@@ -182,7 +85,6 @@
             currentUser = JSON.parse(userData);
             welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
             
-            // Connect to Socket.IO and register socket
             const socket = io(API_URL);
             socket.on('connect', () => {
                 socket.emit('register_socket', currentUser.username);
@@ -191,14 +93,20 @@
             loadRooms();
         }
 
-        // --- API Call to Load Rooms ---
         async function loadRooms() {
             loadingMessage.style.display = 'block';
             roomsContainer.innerHTML = ''; 
 
             try {
                 const response = await fetch(`${API_URL}/api/rooms`);
-                const data = await response.json();
+                
+                // Server might send HTML error page instead of JSON (Render sleep issue)
+                const text = await response.text();
+                if (text.startsWith('<')) {
+                    throw new Error('Server sent HTML instead of JSON. Server likely sleeping.');
+                }
+                
+                const data = JSON.parse(text);
 
                 if (data.success) {
                     loadingMessage.style.display = 'none';
@@ -209,17 +117,15 @@
                     }
                 } else {
                     alert(`Failed to load rooms: ${data.message}`);
-                    roomsContainer.innerHTML = '<p style="color:red;">Failed to load rooms. Please check server logs.</p>';
+                    roomsContainer.innerHTML = '<p class="error-message">Failed to load rooms. Check server logs.</p>';
                 }
             } catch (error) {
-                // This catches the 'Failed to load rooms' network error
                 console.error('Network error loading rooms:', error);
-                alert('Failed to load rooms. Server might be sleeping. Please refresh.');
-                roomsContainer.innerHTML = '<p style="color:red;">NETWORK ERROR. Failed to load rooms. Check server logs.</p>';
+                alert('Failed to load rooms. Please refresh the page. Server might be sleeping.');
+                roomsContainer.innerHTML = `<p class="error-message">NETWORK ERROR. Failed to load rooms: ${error.message}</p>`;
             }
         }
 
-        // --- Rendering Rooms ---
         function renderRooms(rooms) {
             rooms.forEach(room => {
                 const roomCard = document.createElement('div');
@@ -229,7 +135,10 @@
                     <div class="room-info">
                         <h3>${room.name} (${room.isPublic ? 'Public' : 'Private'})</h3>
                         <p>Owner: ${room.owner}</p>
-                        <p>Members: ${room.liveCount}</p>
+                    </div>
+                    <div class="room-details">
+                        <span>${room.liveCount}</span>
+                        <p>Members</p>
                     </div>
                 `;
                 roomCard.addEventListener('click', () => joinRoom(room.id));
@@ -237,36 +146,24 @@
             });
         }
 
-        // --- Room Actions ---
         function joinRoom(roomId) {
-            alert(`Joining room: ${roomId}. (Functionality to be implemented)`);
-            // In a real app, this would navigate to the actual voice chat page (e.g., room.html)
+            alert(`Joining room: ${roomId}.`);
             // window.location.href = `room.html?id=${roomId}`; 
         }
 
-        // --- Logout ---
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('currentUsername');
             localStorage.removeItem('currentUserData');
             window.location.href = 'index.html';
         });
 
-        // --- Modal Control ---
-        createRoomBtn.onclick = function() {
-            modal.style.display = "block";
-        }
-        closeModal.onclick = function() {
-            modal.style.display = "none";
-            roomCreationError.textContent = ''; // Clear error on close
-        }
+        // Modal and Form Logic (Same as before)
+        createRoomBtn.onclick = function() { modal.style.display = "block"; }
+        closeModal.onclick = function() { modal.style.display = "none"; roomCreationError.textContent = ''; }
         window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-                roomCreationError.textContent = ''; 
-            }
+            if (event.target == modal) { modal.style.display = "none"; roomCreationError.textContent = ''; }
         }
 
-        // --- Room Creation Form Submission ---
         createRoomForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             roomCreationError.textContent = ''; 
@@ -278,11 +175,7 @@
                 const response = await fetch(`${API_URL}/api/rooms/create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: roomName, 
-                        ownerUsername: currentUser.username, 
-                        isPublic: roomType // 'true' or 'false'
-                    }),
+                    body: JSON.stringify({ name: roomName, ownerUsername: currentUser.username, isPublic: roomType }),
                 });
 
                 const data = await response.json();
@@ -290,20 +183,17 @@
                 if (data.success) {
                     alert(`Room "${data.room.name}" created!`);
                     modal.style.display = "none";
-                    document.getElementById('roomName').value = ''; // Clear input
+                    document.getElementById('roomName').value = ''; 
                     loadRooms(); // Reload room list
                 } else {
                     roomCreationError.textContent = 'Server error during room creation: ' + data.message;
                 }
             } catch (error) {
-                console.error('Network error creating room:', error);
                 roomCreationError.textContent = 'NETWORK ERROR: Could not connect to server.';
             }
         });
 
-        // Start the page logic
         initRoomsPage();
     </script>
 </body>
-    </html>
-                    
+</html>
