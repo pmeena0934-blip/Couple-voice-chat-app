@@ -388,4 +388,3 @@ server.listen(PORT, () => {
     console.log(`Live URL: ${RENDER_URL}`);
     console.log('Application started successfully. Ready for use.');
 });
-        
